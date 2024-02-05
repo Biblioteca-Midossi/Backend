@@ -1,14 +1,14 @@
-from flask import Flask, jsonify
-from flask_cors import CORS
+import os
 
+from flask import Flask, send_from_directory
+from flask_cors import CORS
+from Routes.Test import test
+
+# Create `app` beforehand, so you can pass it to Routes.
 app = Flask(__name__)
+app.register_blueprint(test)
 CORS(app)
 
 
-@app.route('/api/test', methods=['GET'])
-def hello():
-    return jsonify({'message': 'Test route works! Now try the others! 💀'}), 200
-
-
 if __name__ == '__main__':
-    app.run()
+    app.run(debug = True)
