@@ -1,12 +1,13 @@
 import os
 
-from flask import Flask, send_from_directory
+from flask import Flask
 from flask_cors import CORS
-from Routes.Test import test
+from Routes import register_blueprints
 
-# Create `app` beforehand, so you can pass it to Routes.
+
 app = Flask(__name__)
-app.register_blueprint(test)
+register_blueprints(app)
+
 CORS(app)
 
 
