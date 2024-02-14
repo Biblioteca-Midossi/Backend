@@ -40,6 +40,12 @@ class Database:
         except mysql.Error as err:
             print(f'Error while closing the connection: {err}')
 
+    def commit(self):
+        try:
+            self.conn.commit()
+        except mysql.Error as ce:
+            print(f'Error committing changes: {ce}')
+
     def get_cursor(self):
         return self.cursor
 
