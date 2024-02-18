@@ -13,6 +13,8 @@ database_config: Dict[str, Optional[str]] = {
     "port": get_key('.env', 'PORT'),
 }
 
+connection_pool = mysql.pooling.MySQLConnectionPool(pool_name = "pool", **database_config)
+
 
 class Database:
     def __init__(self):
@@ -21,7 +23,7 @@ class Database:
 
     def open(self):
         try:
-            self.conn = mysql.connect(**database_config)
+            self.conn = connection_pool.get_connection()
         except mysql.Error as err:
             logging.error(f'Error connecting to the platform (connection): {err}')
             raise
