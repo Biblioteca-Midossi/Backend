@@ -7,3 +7,4 @@ __pycache__
 # Evironment files
 .venv
 .env
+.envpp
