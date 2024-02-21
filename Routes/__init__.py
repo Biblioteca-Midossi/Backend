@@ -1,22 +1,21 @@
-from flask import jsonify, Flask
-from .Test import Test
-from .Insert import Insert
+from fastapi import FastAPI
+from fastapi.responses import FileResponse, JSONResponse
+from Routes import Test, Insert
 
 
-def register_blueprints(app: Flask):
+def register_routes(app: FastAPI):
 
-    # Try putting these in a class where you pass `app`
-    # to initialize it and then register as a Blueprint.
-    # Also substitute Blueprints with Flask RESTful
-    # (Check performance comparison before doing)
-    # Also take a look at Quart and Falcon libraries.
-    @app.errorhandler(404)
-    def page_not_found(error):
-        return jsonify({'error': f'{error}'}), 404
+    @app.get('/favicon.ico', include_in_schema = False)
+    async def favicon():
+        return FileResponse('favicon.ico')
 
-    @app.errorhandler(500)
+    @app.exception_handler(404)
+    async def page_not_found(error):
+        return JSONResponse({'error': f'{error}'}, status_code = 404)
+
+    @app.exception_handler(500)
     def internal_server_error(error):
-        return jsonify({'error': f'{error}'}), 500
+        return JSONResponse({'error': f'{error}'}, status_code = 500)
 
-    app.register_blueprint(Test('Test'))
-    app.register_blueprint(Insert('Insert'))
+    app.include_router(Test.router)
+    app.include_router(Insert.router)

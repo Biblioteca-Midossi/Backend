@@ -1,25 +1,32 @@
-from flask import jsonify, Blueprint
+from fastapi import APIRouter
+from fastapi.responses import JSONResponse
 from Utils.Database.DbHelper import Database
 
-from time import time
+router = APIRouter(
+    prefix = '/api',
+    tags = ['test'],
+    responses = {
+        404: {
+            "description": "Not found"
+        }
+    }
+)
 
 
-class Test(Blueprint):
-    def __init__(self, name):
-        super().__init__(name, __name__)
+@router.get('/test')
+async def test_route():
+    return JSONResponse({'message': 'Test route works! Now try the others! 💀'}, status_code = 200)
 
-        @self.route('/api/test')
-        def test_route():
-            return jsonify({'message': 'Test route works! Now try the others! 💀'}), 200
 
-        @self.route('/api/get-test')
-        def db_get_test():
-            print(round(time() * 1000))
-            with Database() as db:
-                cursor = db.get_cursor()
-                cursor.execute("select * from biblioteca.test")
-                print(round(time()*1000))
-                test_result = [{
-                    'test': result[0],
-                } for result in cursor.fetchall()]
-            return jsonify(test_result)
+@router.get('/get-test')
+def db_get_test():
+    try:
+        with Database() as db:
+            cursor = db.get_cursor()
+            cursor.execute("select * from biblioteca.test")
+            test_result = [{
+                'test': result[0],
+            } for result in cursor.fetchall()]
+        return JSONResponse({'result': test_result}, status_code = 200)
+    except Exception as e:
+        return JSONResponse({'error': str(e)}, status_code = 400)
