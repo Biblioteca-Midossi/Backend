@@ -6,9 +6,7 @@ print('starting..')
 
 app = FastAPI()
 origins = [
-    "http://localhost",
-    "http://localhost:8001",
-    "*"
+    "0.0.0.0"
 ]
 
 app.add_middleware(
