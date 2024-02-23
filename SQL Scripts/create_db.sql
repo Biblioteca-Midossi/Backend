@@ -39,7 +39,7 @@ create table biblioteca.autori (
 
 -- Tabella libri (in FK diretta con tutte le altre tabelle)[primary key .automatic?)
 create table biblioteca.libri (
-    isbn int not null PRIMARY KEY, -- Identificativo del libro
+    isbn int not null PRIMARY KEY, -- Identificativo del libro (se c'e gia quantita+=1)
     titolo varchar(80), -- 80
     genere varchar(30), -- scolasticiscientifici, letterari, gialli, giornalismo
     numero_in_inventario int, -- quantita'
