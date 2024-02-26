@@ -2,7 +2,6 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from Routes import register_routes
 
-print('starting..')
 
 app = FastAPI()
 
@@ -14,7 +13,10 @@ app.add_middleware(
     allow_headers = ['*'],
 )
 
-register_routes(app)
+
+@app.on_event('startup')
+async def startup_event():
+    register_routes(app)
 
 
 @app.get("/")

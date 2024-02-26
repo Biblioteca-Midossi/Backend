@@ -1,27 +1,27 @@
-create schema biblioteca;
+create schema if not exists biblioteca;
 
 -- Tabella test :P
-create table biblioteca.test(
+create table if not exists biblioteca.test(
     test varchar(10)
 );
 
 -- Tabella istituti
-create table biblioteca.istituti (
+create table if not exists biblioteca.istituti (
     id_istituto int auto_increment not null primary key, -- Id dell'istituto
-    nome_istituto varchar(50) not null -- Nome dell'istituto
+    nome_istituto varchar(5) not null -- Nome dell'istituto
 );
 
 -- Tabella collocazioni
-create table biblioteca.collocazioni (
+create table if not exists biblioteca.collocazioni (
     id_collocazione int auto_increment not null PRIMARY KEY, -- Id della collocazione
-    id_istituto varchar(30), -- Id dell'istituto
+    id_istituto int, -- Id dell'istituto
     scaffale varchar(3), -- Collocazione
 
     foreign key (id_istituto) references biblioteca.istituti(id_istituto)
 );
 
 -- Tabella utenti
-create table biblioteca.utenti (
+create table if not exists biblioteca.utenti (
     id_utente int auto_increment not null primary key, -- Id utente
     cognome varchar(50) not null, -- Cognome utente
     nome varchar(50) not null, -- Nome utente
@@ -31,14 +31,14 @@ create table biblioteca.utenti (
 );
 
 -- Tabella autori (LIMITE UN AUTORE .. magari descrizione con altri autori. (indviduare Principale autore, loro)
-create table biblioteca.autori (
+create table if not exists biblioteca.autori (
     id_autore int auto_increment primary key, -- Id dell'autore
     nome varchar(50), -- Nome autore
     cognome varchar(50) -- Cognome autore
 );
 
 -- Tabella libri (in FK diretta con tutte le altre tabelle)[primary key .automatic?)
-create table biblioteca.libri (
+create table if not exists biblioteca.libri (
     isbn int not null PRIMARY KEY, -- Identificativo del libro (se c'e gia quantita+=1)
     titolo varchar(80), -- 80
     genere varchar(30), -- scolasticiscientifici, letterari, gialli, giornalismo
@@ -54,7 +54,7 @@ create table biblioteca.libri (
 );
 
 -- Tabella prenotazioni
-create table biblioteca.prenotazioni (
+create table if not exists biblioteca.prenotazioni (
     id_prenotazione int not null auto_increment primary key, -- Id della prenotazione
     id_utente int not null, -- Id dell'utente che ha effettuato la prenozatione
     isbn_libro int not null, -- Identificativo del libro
@@ -63,4 +63,7 @@ create table biblioteca.prenotazioni (
 
     foreign key (id_utente) references biblioteca.utenti(id_utente),
     foreign key (isbn_libro) references biblioteca.libri(isbn)
-)
+);
+
+-- can use this if you don't have root acces, just uncomment
+-- grant select, insert on biblioteca to 'biblioteca'@'localhost';
