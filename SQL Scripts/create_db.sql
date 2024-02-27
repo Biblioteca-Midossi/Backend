@@ -7,7 +7,7 @@ create table if not exists biblioteca.test(
 
 -- Tabella istituti
 create table if not exists biblioteca.istituti (
-    id_istituto int auto_increment not null primary key, -- Id dell'istituto
+    id_istituto int not null primary key, -- Id dell'istituto
     nome_istituto varchar(5) not null -- Nome dell'istituto
 );
 
@@ -67,3 +67,11 @@ create table if not exists biblioteca.prenotazioni (
 
 -- can use this if you don't have root acces, just uncomment
 -- grant select, insert on biblioteca to 'biblioteca'@'localhost';
+
+-- Queries to populate PK tables
+-- biblioteca.istituti
+insert ignore into biblioteca.istituti(id_istituto, nome_istituto)
+    VALUES
+        (1, 'ITT'),
+        (2, 'LAC'),
+        (3, 'LAV')
