@@ -11,6 +11,7 @@ if os.path.exists('.env'):
     port = get_key('.env', 'PORT')
 else:
     # These are specific to our use case, but can be changed.
+    # Default options for EasyPHP MySQL.
     database = 'biblioteca'
     user = 'root'
     password = ''

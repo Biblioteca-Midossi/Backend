@@ -8,7 +8,7 @@ create table if not exists biblioteca.test(
 -- Tabella istituti
 create table if not exists biblioteca.istituti (
     id_istituto int not null primary key, -- Id dell'istituto
-    nome_istituto varchar(5) not null -- Nome dell'istituto
+    nome_istituto varchar(3) not null -- Nome dell'istituto
 );
 
 -- Tabella collocazioni
@@ -39,15 +39,16 @@ create table if not exists biblioteca.autori (
 
 -- Tabella libri (in FK diretta con tutte le altre tabelle)[primary key .automatic?)
 create table if not exists biblioteca.libri (
-    isbn int not null PRIMARY KEY, -- Identificativo del libro (se c'e gia quantita+=1)
-    titolo varchar(80), -- 80
-    genere varchar(30), -- scolasticiscientifici, letterari, gialli, giornalismo
-    numero_in_inventario int, -- quantita'
-    descrizione varchar(200), -- parole chiavi  per la ricerca... TERZO VOLUME,risorse online,autori secondari,...
-    -- ?
     id_collocazione int, -- Id della collocazione (posizione, istituto)
-    casa_editrice varchar(50), -- Nome casa editrice
+
     id_autore int, -- Id dell'autore
+
+    isbn varchar(17) not null PRIMARY KEY, -- Identificativo del libro (se c'e gia quantita+=1)
+    titolo varchar(100),
+    genere varchar(255), -- scolastici, scientifici, letterari, gialli, giornalismo
+    quantita int, -- quantita'
+    casa_editrice varchar(50), -- Nome casa editrice
+    descrizione varchar(255), -- parole chiavi  per la ricerca... TERZO VOLUME,risorse online,autori secondari,...
 
     foreign key (id_collocazione) references biblioteca.collocazioni(id_collocazione),
     foreign key (id_autore) references biblioteca.autori(id_autore)
@@ -70,8 +71,10 @@ create table if not exists biblioteca.prenotazioni (
 
 -- Queries to populate PK tables
 -- biblioteca.istituti
-insert ignore into biblioteca.istituti(id_istituto, nome_istituto)
-    VALUES
-        (1, 'ITT'),
-        (2, 'LAC'),
-        (3, 'LAV')
+insert ignore into
+    biblioteca.istituti(id_istituto, nome_istituto)
+VALUES
+    (1, 'ITT'),
+    (2, 'LAC'),
+    (3, 'LAV'),
+    (4, 'EXT');
