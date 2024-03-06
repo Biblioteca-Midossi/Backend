@@ -96,8 +96,11 @@ def insert_libro(libro, id_autore, id_collocazione):
     casa_editrice: str = libro.get('casa_editrice')
     descrizione: str = libro.get('descrizione')
 
+    print(isbn, titolo, genere, quantita, casa_editrice, descrizione, id_autore, id_collocazione)
+
     with Database() as db:
         cursor = db.get_cursor()
+        print('executing libro..')
         cursor.execute('insert into biblioteca.libri'
                        '(id_collocazione, id_autore, isbn, titolo, '
                        'genere, quantita, casa_editrice, descrizione) '
@@ -105,6 +108,8 @@ def insert_libro(libro, id_autore, id_collocazione):
                        (id_collocazione, id_autore, isbn, titolo,
                         genere, quantita, casa_editrice, descrizione)
                        )
+        print('committing libro..')
+        db.commit()
 
 
 async def insert_book_into_database(data: list[str]):

@@ -22,7 +22,7 @@ class Database:
 
         # getting the cursor
         try:
-            self.cursor = self.conn.cursor()
+            self.cursor = self.conn.cursor(buffered = True)
         except mysql.Error as err:
             logging.error(f'Error connecting to the platform (cursor): {err}')
         return self.conn
