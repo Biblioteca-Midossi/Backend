@@ -22,15 +22,13 @@ async def getBooks():
         cursor.execute("select l.titolo, a.nome "
                        "from biblioteca.libri as l, biblioteca.autori as a "
                        "where l.id_autore = a.id_autore")
-        raw_books: list = list(itertools.chain(*cursor.fetchall()))
+        raw_books: list = cursor.fetchall()
         print(raw_books)
-
         books: list[dict] = [
             {
                 "titolo": book[0],
                 "autore": book[1],
-            }
-            for book in raw_books
+            } for book in raw_books
         ]
     print({'books': raw_books})
     print({'books': books})
