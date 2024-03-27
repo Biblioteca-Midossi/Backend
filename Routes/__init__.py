@@ -1,6 +1,6 @@
 from fastapi import FastAPI
 from fastapi.responses import FileResponse, JSONResponse
-from Routes import Test, Insert, Books
+from Routes import Test, Insert, Books, Assets
 
 
 def register_routes(app: FastAPI):
@@ -20,3 +20,4 @@ def register_routes(app: FastAPI):
     app.include_router(Test.router)
     app.include_router(Insert.router)
     app.include_router(Books.router)
+    app.include_router(Assets.router)

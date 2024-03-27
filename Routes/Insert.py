@@ -1,7 +1,14 @@
+import io
+import os
+import pathlib
+import shutil
+
 import mysql.connector
-from fastapi import APIRouter, Request, HTTPException
+from fastapi import APIRouter, Request, HTTPException, File, UploadFile
 from fastapi.responses import JSONResponse
 from Utils.Database.DbHelper import Database
+
+from PIL import Image
 
 router = APIRouter(
     prefix = '/api',
@@ -20,6 +27,18 @@ class InvalidRequestError(Exception):
 
 class DatabaseError(Exception):
     pass
+
+
+def check_isbn_exists(isbn: str) -> bool:
+    with Database() as db:
+        cursor = db.get_cursor()
+        cursor.execute('select count(*) from biblioteca.libri where isbn = %s', (isbn,))
+        if cursor.fetchone()[0] == 0:
+            # print("isbn doesn't exist")
+            return False
+        else:
+            # print("isbn exists")
+            return True
 
 
 def insert_collocazione(collocazione: dict[str, str]) -> int:
@@ -45,8 +64,8 @@ def insert_collocazione(collocazione: dict[str, str]) -> int:
                     case _:
                         print('case _')
                         raise HTTPException(
-                            status_code=400,
-                            detail='Bad request. Check `Istituto`'
+                            status_code = 400,
+                            detail = 'Bad request. Check `Istituto`'
                         )
 
                 print('first ex')
@@ -132,6 +151,10 @@ async def insert_book_into_database(data: list[str]):
     }
 
     try:
+        print(libro.get('isbn'))
+        print('checking isbn..')
+        if check_isbn_exists(libro.get('isbn')):
+            return {"message": "The isbn is already in the database"}, 409
         print('collocazione...')
         id_collocazione = insert_collocazione(collocazione)
         print('autore...')
@@ -163,4 +186,67 @@ async def insert(request: Request):
     except InvalidRequestError as e:
         return JSONResponse({'error': str(e)}, status_code = 400)
     except DatabaseError as e:
-        return JSONResponse({'error': str(e)}, status_code=500)
+        print('Database error: ', e)
+        return JSONResponse({'error': str(e)}, status_code = 500)
+
+
+async def covert_to_png(file_content: bytes):
+    try:
+        # print('trying to convert')
+        with Image.open(io.BytesIO(file_content)) as img:
+            # print('converting to rgb')
+            img = img.convert('RGB')
+            # print('converting to png')
+            png_bytes = io.BytesIO()
+            img.save(png_bytes, format='PNG')
+            # print('returning..')
+            return png_bytes.getvalue()
+    except Exception as e:
+        print('exception in png')
+        print(e)
+        # return JSONResponse({'error': str(e)}, status_code = 500)
+
+
+@router.post('/thumbnail/{isbn}')
+async def upload_thumbnail(isbn: str, file: UploadFile = File(...)):
+    try:
+        print(isbn)
+        # Convert to PNG
+        # print('converting to png..')
+        png_bytes = await covert_to_png(await file.read())
+        # print('file successfully converted!')
+
+        # Make sure the directory is there
+        # print('settings save directory..')
+        save_directory = './assets/thumbnails/'
+        os.makedirs(save_directory, exist_ok=True)
+
+        # Save the uploaded file
+        # print('saving..')
+        file_path = os.path.join(save_directory, f'{isbn}.png')
+        with open(file_path, 'wb') as buffer:
+            buffer.write(png_bytes)
+        # print('file successfully saved!')
+
+        with Database() as db:
+            print('adding thumbnail to database..')
+            cursor = db.get_cursor()
+            cursor.execute('update biblioteca.libri '
+                           'set thumbnail_path = %s where isbn = %s',
+                           (file_path[2:], isbn))
+            db.commit()
+
+        return JSONResponse({'status': 'successful'}, status_code = 200)
+
+    except DatabaseError as e:
+        print('Database error: ', e)
+        return JSONResponse({'error': str(e)}, status_code = 500)
+    except FileExistsError as e:
+        print('FileExistsError:', e)
+        raise HTTPException(status_code = 400, detail = "File already exists")
+    except IOError as e:
+        print('IOERROR:', e)
+        raise HTTPException(status_code = 500, detail = str(e))
+    except Exception as e:
+        print('Unexpected error:', e)
+        raise HTTPException(status_code = 500, detail = str(e))
