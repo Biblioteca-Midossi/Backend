@@ -3,7 +3,6 @@ import os
 from fastapi import APIRouter, HTTPException
 from fastapi.responses import FileResponse
 
-
 router = APIRouter(
     prefix = '/assets',
     tags = ['assets'],
@@ -25,3 +24,16 @@ async def get_thumbnail(isbn: str):
             raise HTTPException(status_code = 404, detail = "Thumbnail not found")
     except Exception as e:
         raise HTTPException(status_code = 500, detail = str(e))
+
+
+#
+# @router.get("/logos/midossi.png")
+# async def get_logo_midossi():
+#     try:
+#         path = "./assets/logos"
+#         if os.path.exists(path):
+#             return FileResponse("./assets/logos/midossi.png")
+#         else:
+#             raise HTTPException(status_code = 404, detail = "Logo not found")
+#     except Exception as e:
+#         raise HTTPException(status_code = 500, detail = str(e))

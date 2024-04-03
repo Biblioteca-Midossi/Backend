@@ -50,7 +50,7 @@ create table if not exists biblioteca.libri (
     casa_editrice varchar(50), -- Nome casa editrice
     descrizione varchar(255), -- parole chiavi  per la ricerca... TERZO VOLUME,risorse online,autori secondari,...
 
-    thumnail_path varchar(255), -- percorso della copertina del libro
+    thumbnail_path varchar(255), -- percorso della copertina del libro
 
     foreign key (id_collocazione) references biblioteca.collocazioni(id_collocazione),
     foreign key (id_autore) references biblioteca.autori(id_autore)
