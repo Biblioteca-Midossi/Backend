@@ -93,18 +93,29 @@ def insert_autore(autore: dict[str, str]):
 
     with Database() as db:
         cursor = db.get_cursor()
-        cursor.execute('insert into biblioteca.autori '
-                       '(nome, cognome) values (%s, %s)',
-                       (nome, cognome)
-                       )
-        db.commit()
 
+        # check if author already exists in db..
         cursor.execute('select id_autore from biblioteca.autori '
                        'where nome = %s and cognome = %s',
                        (nome, cognome)
                        )
+        author = cursor.fetchone()[0]
 
-        return cursor.fetchone()[0]
+        if author:
+            return author
+        else:
+            cursor.execute('insert into biblioteca.autori '
+                           '(nome, cognome) values (%s, %s)',
+                           (nome, cognome)
+                           )
+            db.commit()
+
+            cursor.execute('select id_autore from biblioteca.autori '
+                           'where nome = %s and cognome = %s',
+                           (nome, cognome)
+                           )
+
+            return cursor.fetchone()[0]
 
 
 def insert_libro(libro, id_autore, id_collocazione):
@@ -151,17 +162,17 @@ async def insert_book_into_database(data: list[str]):
     }
 
     try:
-        print(libro.get('isbn'))
-        print('checking isbn..')
+        # print(libro.get('isbn'))
+        # print('checking isbn..')
         if check_isbn_exists(libro.get('isbn')):
             return {"message": "The isbn is already in the database"}, 409
-        print('collocazione...')
+        # print('collocazione...')
         id_collocazione = insert_collocazione(collocazione)
-        print('autore...')
+        # print('autore...')
         id_autore = insert_autore(autore)
-        print('libro...')
+        # print('libro...')
         insert_libro(libro, id_autore, id_collocazione)
-        print('returning 200...')
+        # print('returning 200...')
         return {"status": "successful"}, 200
     except HTTPException as e:
         raise InvalidRequestError(e.detail)
@@ -186,7 +197,7 @@ async def insert(request: Request):
     except InvalidRequestError as e:
         return JSONResponse({'error': str(e)}, status_code = 400)
     except DatabaseError as e:
-        print('Database error: ', e)
+        # print('Database error: ', e)
         return JSONResponse({'error': str(e)}, status_code = 500)
 
 

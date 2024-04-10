@@ -1,11 +1,22 @@
+import asyncio
+from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from Routes import register_routes
 
 
-app = FastAPI()
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    # Run at startup
+    print("Starting application..")
+    await asyncio.create_task(register_routes(app))
+    yield
+    print("Shutting down..")
 
-app.add_middleware(
+
+biblioteca = FastAPI(lifespan=lifespan)
+
+biblioteca.add_middleware(
     CORSMiddleware,
     allow_origins = ['*'],
     allow_credentials = True,
@@ -14,11 +25,6 @@ app.add_middleware(
 )
 
 
-@app.on_event('startup')
-async def startup_event():
-    register_routes(app)
-
-
-@app.get("/")
+@biblioteca.get("/")
 async def root():
     return {'message': 'Hello World'}

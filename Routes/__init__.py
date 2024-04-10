@@ -3,8 +3,7 @@ from fastapi.responses import FileResponse, JSONResponse
 from Routes import Test, Insert, Books, Assets
 
 
-def register_routes(app: FastAPI):
-
+async def register_routes(app: FastAPI):
     @app.get('/favicon.ico', include_in_schema = False)
     async def favicon():
         return FileResponse('favicon.ico')
