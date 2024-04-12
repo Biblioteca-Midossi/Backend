@@ -48,7 +48,7 @@ create table if not exists biblioteca.libri (
     genere varchar(255), -- scolastici, scientifici, letterari, gialli, giornalismo
     quantita int, -- quantita'
     casa_editrice varchar(50), -- Nome casa editrice
-    descrizione varchar(255), -- parole chiavi  per la ricerca... TERZO VOLUME,risorse online,autori secondari,...
+    descrizione varchar(1024), -- parole chiavi  per la ricerca... TERZO VOLUME,risorse online,autori secondari,...
 
     thumbnail_path varchar(255), -- percorso della copertina del libro
 
