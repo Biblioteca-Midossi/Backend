@@ -1,9 +1,6 @@
 import io
 import os
-import pathlib
-import shutil
 
-import mysql.connector
 from fastapi import APIRouter, Request, HTTPException, File, UploadFile
 from fastapi.responses import JSONResponse
 from Utils.Database.DbHelper import Database
@@ -43,51 +40,39 @@ def check_isbn_exists(isbn: str) -> bool:
 
 def insert_collocazione(collocazione: dict[str, str]) -> int:
     scaffale: str = collocazione.get('scaffale').upper()
-    istituto: str = collocazione.get('istituto')
-    print('isnan check')
-    try:
-        print('isnan check')
-        if not istituto.isdigit():
-            print('opening database...')
-            with Database() as db:
-                cursor = db.get_cursor()
-                match istituto.upper():
-                    case 'ITT':
-                        print('case itt')
-                        id_istituto = 1
-                    case 'LAC':
-                        print('case lac')
-                        id_istituto = 2
-                    case 'LAV':
-                        print('case lav')
-                        id_istituto = 3
-                    case _:
-                        print('case _')
-                        raise HTTPException(
-                            status_code = 400,
-                            detail = 'Bad request. Check `Istituto`'
-                        )
+    istituto: str = collocazione.get('istituto').upper()
 
-                print('first ex')
+    id_istituto_map: dict = {'ITT': 1, 'LAC': 2, 'LAV': 3}
+    id_istituto: int = id_istituto_map.get(istituto)
+
+    with Database() as db:
+        cursor = db.get_cursor()
+
+        # check if location is already is in db..
+        cursor.execute('select scaffale from biblioteca.collocazioni '
+                       'where id_istituto = %s'), (id_istituto,)
+        id_collocazione = cursor.fetchone()[0]
+
+        if id_collocazione:
+            return id_collocazione
+        else:
+            try:
                 cursor.execute('insert into biblioteca.collocazioni'
                                '(id_istituto, scaffale) values (%s, %s)',
                                (id_istituto, scaffale)
                                )
-                print('commit')
                 db.commit()
 
-                print('second ex')
                 cursor.execute('select id_collocazione from biblioteca.collocazioni '
                                'where scaffale = %s and id_istituto = %s',
                                (scaffale, id_istituto)
                                )
-                print('fetch')
                 return cursor.fetchone()[0]
-    except mysql.connector.Error as e:
-        print(e)
+            except Exception as e:
+                raise DatabaseError(e)
 
 
-def insert_autore(autore: dict[str, str]):
+def insert_autore(autore: dict[str, str]) -> int:
     nome: str = autore.get('nome')
     cognome: str = autore.get('cognome')
 
@@ -209,7 +194,7 @@ async def covert_to_png(file_content: bytes):
             img = img.convert('RGB')
             # print('converting to png')
             png_bytes = io.BytesIO()
-            img.save(png_bytes, format='PNG')
+            img.save(png_bytes, format = 'PNG')
             # print('returning..')
             return png_bytes.getvalue()
     except Exception as e:
@@ -230,7 +215,7 @@ async def upload_thumbnail(isbn: str, file: UploadFile = File(...)):
         # Make sure the directory is there
         # print('settings save directory..')
         save_directory = './assets/thumbnails/'
-        os.makedirs(save_directory, exist_ok=True)
+        os.makedirs(save_directory, exist_ok = True)
 
         # Save the uploaded file
         # print('saving..')

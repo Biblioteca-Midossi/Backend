@@ -43,14 +43,14 @@ create table if not exists biblioteca.libri (
 
     id_autore int, -- Id dell'autore
 
-    isbn varchar(17) not null PRIMARY KEY, -- Identificativo del libro (se c'e gia quantita+=1)
-    titolo varchar(100),
-    genere varchar(255), -- scolastici, scientifici, letterari, gialli, giornalismo
+    isbn varchar(64) not null PRIMARY KEY, -- Identificativo del libro (se c'e gia quantita+=1)
+    titolo varchar(128),
+    genere varchar(256), -- scolastici, scientifici, letterari, gialli, giornalismo
     quantita int, -- quantita'
-    casa_editrice varchar(50), -- Nome casa editrice
+    casa_editrice varchar(128), -- Nome casa editrice
     descrizione varchar(1024), -- parole chiavi  per la ricerca... TERZO VOLUME,risorse online,autori secondari,...
 
-    thumbnail_path varchar(255), -- percorso della copertina del libro
+    thumbnail_path varchar(256), -- percorso della copertina del libro
 
     foreign key (id_collocazione) references biblioteca.collocazioni(id_collocazione),
     foreign key (id_autore) references biblioteca.autori(id_autore)
