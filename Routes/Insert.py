@@ -1,4 +1,5 @@
 import io
+import logging
 import os
 
 from fastapi import APIRouter, Request, HTTPException, File, UploadFile
@@ -150,6 +151,7 @@ async def insert_book_into_database(data: list[str]):
         # print(libro.get('isbn'))
         # print('checking isbn..')
         if check_isbn_exists(libro.get('isbn')):
+            logging.warning(f"Libro '{libro['titolo']}' non inserito. L'isbn '{libro['isbn']}' esiste gia'.")
             return {"message": "The isbn is already in the database"}, 409
         # print('collocazione...')
         id_collocazione = insert_collocazione(collocazione)
@@ -157,11 +159,12 @@ async def insert_book_into_database(data: list[str]):
         id_autore = insert_autore(autore)
         # print('libro...')
         insert_libro(libro, id_autore, id_collocazione)
-        # print('returning 200...')
+        logging.info(f"Libro '{libro['titolo']}' inserito correttamente nel database.")
         return {"status": "successful"}, 200
     except HTTPException as e:
         raise InvalidRequestError(e.detail)
     except Exception as e:
+        logging.error(f"Richiesta invalida: {e}")
         raise DatabaseError(e)
 
 
@@ -180,9 +183,10 @@ async def insert(request: Request):
 
         return JSONResponse(*response)
     except InvalidRequestError as e:
+        logging.error(f"Richiesta invalida: {e}.")
         return JSONResponse({'error': str(e)}, status_code = 400)
     except DatabaseError as e:
-        # print('Database error: ', e)
+        logging.error(f"Qualcosa e' andato storo nel database: {e}.")
         return JSONResponse({'error': str(e)}, status_code = 500)
 
 
