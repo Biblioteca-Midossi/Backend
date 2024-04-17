@@ -50,22 +50,25 @@ def insert_collocazione(collocazione: dict[str, str]) -> int:
         cursor = db.get_cursor()
 
         # check if location is already is in db..
+        print('select scaffale 1')
         cursor.execute('select scaffale from biblioteca.collocazioni '
-                       'where id_istituto = %s'), (id_istituto,)
+                       'where id_istituto = %i'), (id_istituto,)
         id_collocazione = cursor.fetchone()[0]
 
         if id_collocazione:
             return id_collocazione
         else:
             try:
+                print('insert scaffale 1')
                 cursor.execute('insert into biblioteca.collocazioni'
-                               '(id_istituto, scaffale) values (%s, %s)',
+                               '(id_istituto, scaffale) values (%i, %s)',
                                (id_istituto, scaffale)
                                )
                 db.commit()
 
+                print('select scaffale 2')
                 cursor.execute('select id_collocazione from biblioteca.collocazioni '
-                               'where scaffale = %s and id_istituto = %s',
+                               'where scaffale = %s and id_istituto = %i',
                                (scaffale, id_istituto)
                                )
                 return cursor.fetchone()[0]
