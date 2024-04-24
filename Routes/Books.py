@@ -24,7 +24,7 @@ async def getBooks():
     with Database() as db:
         # gets cursor from db
         cursor = db.get_cursor()
-        cursor.execute("select l.titolo, a.nome, a.cognome, l.thumbnail_path "
+        cursor.execute("select l.titolo, a.nome, a.cognome, l.id_libro, l.thumbnail_path "
                        "from biblioteca.libri as l, biblioteca.autori as a "
                        "where l.id_autore = a.id_autore")
         # assigns the result of the query to `raw_books`.
@@ -35,11 +35,12 @@ async def getBooks():
             {
                 "titolo": book[0],
                 "autore": f"{book[1]} {book[2]}",
-                "coverUrl": book[3]
+                "id": f"{book[3]}",
+                "coverUrl": book[4]
             } for book in raw_books
         ]
-    print({'books': raw_books})
-    print({'books': books})
+    # print({'books': raw_books})
+    # print({'books': books})
     # sends books as a response
     return JSONResponse({'books': books}, status_code = 200)
 
