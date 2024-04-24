@@ -11,3 +11,7 @@ __pycache__
 
 # Assets
 assets
+
+# Certificates
+key.pem
+cert.pem
