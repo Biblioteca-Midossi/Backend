@@ -1,4 +1,4 @@
-insert into biblioteca.libri (id_collocazione, id_autore, isbn, titolo, genere, quantita, casa_editrice, descrizione, thumbnail_path, id_libro)
+insert into Sql1259724_5.libri (id_collocazione, id_autore, isbn, titolo, genere, quantita, casa_editrice, descrizione, thumbnail_path, id_libro)
 values  (1, 1, 'Vale', 'Vale', 'Vale', 7, 'Vale', 'Vale', 'assets/thumbnails/VALE.png', 1),
         (3, 3, '978-88-04-66789-6', 'Il visconte dimezzato', 'Narrativa', 1, 'Mondadori', '"Il visconte dimezzato" di Italo Calvino racconta la storia di Visconte Medardo dimezzato da un cannone: metà gentile, metà crudele. Esplora identità e dualità in un''atmosfera fantastica e sognante.', 'assets/thumbnails/978-88-04-66789-6.png', 2),
         (3, 3, '978-88-04-66795-7', 'Il cavaliere inesistente', 'Narrativa', 1, 'Mondadori', '"Il cavaliere inesistente" di Italo Calvino segue le gesta di Agilulfo, un cavaliere che non esiste fisicamente ma incarna l''ideale cavalleresco. La storia esplora temi di onore, identità e realtà in un contesto fantastico-medievale.', 'assets/thumbnails/978-88-04-66795-7.png', 3),

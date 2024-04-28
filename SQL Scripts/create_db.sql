@@ -1,49 +1,50 @@
-create schema if not exists biblioteca;
+-- create schema if not exists Sql1259724_5; -- very dangerous B)
+use Sql1259724_5; -- It's already there, right? :)
 
 -- Tabella test :P
-create table if not exists biblioteca.test(
+create table if not exists test(
     test varchar(10)
 );
 
 -- Tabella istituti
-create table if not exists biblioteca.istituti (
+create table if not exists istituti (
     id_istituto int not null primary key, -- Id dell'istituto
     nome_istituto varchar(3) not null -- Nome dell'istituto
 );
 
 -- Tabella collocazioni
-create table if not exists biblioteca.collocazioni (
+create table if not exists collocazioni (
     id_collocazione int auto_increment not null PRIMARY KEY, -- Id della collocazione
     id_istituto int, -- Id dell'istituto
     scaffale varchar(3), -- Collocazione
 
-    foreign key (id_istituto) references biblioteca.istituti(id_istituto)
+    foreign key (id_istituto) references istituti(id_istituto)
 );
 
 -- Tabella utenti
-create table if not exists biblioteca.utenti (
+create table if not exists utenti (
     id_utente int auto_increment not null primary key, -- Id utente
     cognome varchar(50) not null, -- Cognome utente
     nome varchar(50) not null, -- Nome utente
     id_istituto int, -- Id istituto apparentenenza
 
-    foreign key (id_istituto) references biblioteca.istituti(id_istituto)
+    foreign key (id_istituto) references istituti(id_istituto)
 );
 
 -- Tabella autori (LIMITE UN AUTORE .. magari descrizione con altri autori. (indviduare Principale autore, loro)
-create table if not exists biblioteca.autori (
+create table if not exists autori (
     id_autore int auto_increment primary key, -- Id dell'autore
     nome varchar(50), -- Nome autore
     cognome varchar(50) -- Cognome autore
 );
 
--- Tabella libri (in FK diretta con tutte le altre tabelle)[primary key .automatic?)
-create table if not exists biblioteca.libri (
+-- Tabella libri
+create table if not exists libri (
     id_collocazione int, -- Id della collocazione (posizione, istituto)
 
     id_autore int, -- Id dell'autore
 
-    isbn varchar(64) not null PRIMARY KEY, -- Identificativo del libro (se c'e gia quantita+=1)
+    isbn varchar(64) not null, -- Identificativo del libro (se c'e gia quantita+=1)
     titolo varchar(128),
     genere varchar(256), -- scolastici, scientifici, letterari, gialli, giornalismo
     quantita int, -- quantita'
@@ -52,20 +53,22 @@ create table if not exists biblioteca.libri (
 
     thumbnail_path varchar(256), -- percorso della copertina del libro
 
-    foreign key (id_collocazione) references biblioteca.collocazioni(id_collocazione),
-    foreign key (id_autore) references biblioteca.autori(id_autore)
+    id_libro int auto_increment primary key,
+
+    foreign key (id_collocazione) references collocazioni(id_collocazione),
+    foreign key (id_autore) references autori(id_autore)
 );
 
 -- Tabella prenotazioni
-create table if not exists biblioteca.prenotazioni (
+create table if not exists prenotazioni (
     id_prenotazione int not null auto_increment primary key, -- Id della prenotazione
     id_utente int not null, -- Id dell'utente che ha effettuato la prenozatione
     isbn_libro int not null, -- Identificativo del libro
     inizio_prenotazione date not null, -- Data inizio prenotazione
     fine_prenotazione date not null, -- Data fine prenotazione
 
-    foreign key (id_utente) references biblioteca.utenti(id_utente),
-    foreign key (isbn_libro) references biblioteca.libri(isbn)
+    foreign key (id_utente) references utenti(id_utente),
+    foreign key (isbn_libro) references libri(isbn)
 );
 
 -- can use this if you don't have root acces, just uncomment
@@ -74,7 +77,7 @@ create table if not exists biblioteca.prenotazioni (
 -- Queries to populate PK tables
 -- biblioteca.istituti
 insert ignore into
-    biblioteca.istituti(id_istituto, nome_istituto)
+    istituti(id_istituto, nome_istituto)
 VALUES
     (1, 'ITT'),
     (2, 'LAC'),

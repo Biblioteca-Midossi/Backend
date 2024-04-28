@@ -23,7 +23,7 @@ def db_get_test():
     try:
         with Database() as db:
             cursor = db.get_cursor()
-            cursor.execute("select * from biblioteca.test")
+            cursor.execute("select * from test")
             test_result = [{
                 'test': result[0],
             } for result in cursor.fetchall()]

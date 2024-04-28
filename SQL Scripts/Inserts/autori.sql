@@ -1,4 +1,4 @@
-insert into biblioteca.autori (id_autore, nome, cognome)
+insert into Sql1259724_5.autori (id_autore, nome, cognome)
 values  (1, 'Vale', 'Vale'),
         (2, 'J.K ', 'Rowling'),
         (3, 'Italo', 'Calvino'),

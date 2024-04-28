@@ -1,4 +1,4 @@
-insert into biblioteca.collocazioni (id_collocazione, id_istituto, scaffale)
+insert into Sql1259724_5.collocazioni (id_collocazione, id_istituto, scaffale)
 values  (1, 1, 'F57'),
         (2, 1, 'A03'),
         (3, 1, 'C02'),

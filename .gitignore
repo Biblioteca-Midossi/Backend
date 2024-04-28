@@ -7,7 +7,7 @@ __pycache__
 # Evironment files
 .venv
 .env
-.envpp
+.env
 
 # Assets
 assets

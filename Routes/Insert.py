@@ -26,7 +26,7 @@ class DatabaseError(Exception):
 def check_isbn_exists(isbn: str) -> bool:
     with Database() as db:
         cursor = db.get_cursor()
-        cursor.execute('select count(*) from biblioteca.libri where isbn = %s', (isbn,))
+        cursor.execute('select count(*) from libri where isbn = %s', (isbn,))
         return cursor.fetchone()[0] > 0
 
 
@@ -40,7 +40,7 @@ def insert_collocazione(collocazione: dict[str, str]) -> int:
     with Database() as db:
         cursor = db.get_cursor()
 
-        cursor.execute('select id_collocazione from biblioteca.collocazioni '
+        cursor.execute('select id_collocazione from collocazioni '
                        'where scaffale = %s and id_istituto = %s',
                        (scaffale, id_istituto))
 
@@ -48,12 +48,12 @@ def insert_collocazione(collocazione: dict[str, str]) -> int:
         if id_collocazione:
             return id_collocazione[0]
         else:
-            cursor.execute('insert into biblioteca.collocazioni'
+            cursor.execute('insert into collocazioni'
                            '(id_istituto, scaffale) values (%s, %s)',
                            (id_istituto, scaffale))
             db.commit()
 
-            cursor.execute('select id_collocazione from biblioteca.collocazioni '
+            cursor.execute('select id_collocazione from collocazioni '
                            'where scaffale = %s and id_istituto = %s',
                            (scaffale, id_istituto))
             return cursor.fetchone()[0]
@@ -66,19 +66,19 @@ def insert_autore(autore: dict[str, str]) -> int:
     with Database() as db:
         cursor = db.get_cursor()
 
-        cursor.execute('select id_autore from biblioteca.autori '
+        cursor.execute('select id_autore from autori '
                        'where nome = %s and cognome = %s',
                        (nome, cognome))
         author = cursor.fetchone()
         if author:
             return author[0]
         else:
-            cursor.execute('insert into biblioteca.autori '
+            cursor.execute('insert into autori '
                            '(nome, cognome) values (%s, %s)',
                            (nome, cognome))
             db.commit()
 
-            cursor.execute('select id_autore from biblioteca.autori '
+            cursor.execute('select id_autore from autori '
                            'where nome = %s and cognome = %s',
                            (nome, cognome))
             return cursor.fetchone()[0]
@@ -95,7 +95,7 @@ def insert_libro(libro, id_autore, id_collocazione):
     with Database() as db:
         cursor = db.get_cursor()
 
-        cursor.execute('insert into biblioteca.libri'
+        cursor.execute('insert into libri'
                        '(id_collocazione, id_autore, isbn, titolo, '
                        'genere, quantita, casa_editrice, descrizione) '
                        'values (%s, %s, %s, %s, %s, %s, %s, %s)',
@@ -133,7 +133,7 @@ async def upload_thumbnail(isbn: str, file: UploadFile = File(...)):
 
         with Database() as db:
             cursor = db.get_cursor()
-            cursor.execute('update biblioteca.libri '
+            cursor.execute('update libri '
                            'set thumbnail_path = %s where isbn = %s',
                            (file_path[2:], isbn))
             db.commit()
@@ -166,8 +166,11 @@ async def insert_book_into_database(data: list[str]):
 
     try:
         if check_isbn_exists(libro.get('isbn')):
-            logging.warning(f"Book '{libro['titolo']}' not inserted. The ISBN '{libro['isbn']}' already exists.")
-            return {"message": "The ISBN is already in the database"}, 409
+            with Database() as db:
+                cursor = db.get_cursor()
+                cursor.execute("update libri set quantita = libri.quantita + 1 "
+                               "where isbn = %s", (libro.get('isbn'),))
+            return {"message": "The Book is already in the database"}, 200
 
         id_collocazione = insert_collocazione(collocazione)
         id_autore = insert_autore(autore)

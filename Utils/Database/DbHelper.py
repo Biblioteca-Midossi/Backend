@@ -3,7 +3,7 @@ import mysql.connector as mysql
 from Utils.Database.DbConfig import database_config
 from Utils.Database.DatabaseStartupEvent import on_startup
 
-on_startup()
+# on_startup()
 print('creating pool')
 connection_pool = mysql.pooling.MySQLConnectionPool(pool_name = "pool", **database_config)
 
