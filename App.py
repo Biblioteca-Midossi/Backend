@@ -14,7 +14,14 @@ async def lifespan(app: FastAPI):
     print("Shutting down..")
 
 
-biblioteca = FastAPI(lifespan=lifespan)
+biblioteca = FastAPI(lifespan = lifespan, root_path = '/api')
+
+origins = [
+    "http://heyo-server"
+    "http://localhost:8001"
+    "https://localhost:8001"
+    "http://192.168.178.101:8001"
+]
 
 biblioteca.add_middleware(
     CORSMiddleware,

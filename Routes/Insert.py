@@ -1,6 +1,7 @@
 import io
 import logging
 import os
+from typing import Annotated
 
 from fastapi import APIRouter, Request, HTTPException, File, UploadFile
 from fastapi.responses import JSONResponse
@@ -9,7 +10,7 @@ from Utils.Database.DbHelper import Database
 from PIL import Image
 
 router = APIRouter(
-    prefix="/api",
+    prefix="/insert",
     tags=['insert'],
     responses={404: {"description": "Not found"}}
 )
@@ -117,7 +118,7 @@ async def covert_to_png(file_content: bytes):
 
 
 @router.post('/thumbnail/{isbn}')
-async def upload_thumbnail(isbn: str, file: UploadFile = File(...)):
+async def upload_thumbnail(isbn: str, file: Annotated[UploadFile, File(...)]):
     try:
         # Convert to PNG
         png_bytes = await covert_to_png(await file.read())
@@ -189,7 +190,7 @@ async def insert_book_into_database(data: list[str]):
         raise HTTPException(status_code=500, detail="Unexpected error")
 
 
-@router.post("/insert")
+@router.post("/")
 async def insert(request: Request):
     try:
         data = await request.json()

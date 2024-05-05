@@ -4,7 +4,7 @@ from fastapi.responses import JSONResponse
 from Utils.Database.DbHelper import Database
 
 router = APIRouter(
-    prefix = '/api',
+    prefix = '/books',
     tags = ['books'],
     responses = {
         404: {
@@ -14,7 +14,7 @@ router = APIRouter(
 )
 
 
-@router.get('/books')
+@router.get('/')
 async def getBooks():
     with Database() as db:
         # gets cursor from db
@@ -37,7 +37,7 @@ async def getBooks():
     return JSONResponse({'books': books}, status_code = 200)
 
 
-@router.get('/books/{book_id}')
+@router.get('/{book_id}')
 async def getBook(book_id: int = Path(...)):
     with Database() as db:
         cursor = db.get_cursor()

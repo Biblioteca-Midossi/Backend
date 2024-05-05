@@ -3,7 +3,6 @@ from fastapi.responses import JSONResponse
 from Utils.Database.DbHelper import Database
 
 router = APIRouter(
-    prefix = '/api',
     tags = ['test'],
     responses = {
         404: {
