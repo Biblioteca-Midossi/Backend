@@ -2,6 +2,9 @@ from fastapi import APIRouter, Path
 from fastapi.responses import JSONResponse
 
 from Utils.Database.DbHelper import Database
+from logging import getLogger
+
+log = getLogger("FileLogger")
 
 router = APIRouter(
     prefix = '/books',
@@ -55,6 +58,8 @@ async def getBook(book_id: int = Path(...)):
                 "descrizione": book[4],
                 "coverUrl": book[5]
             }
+            log.info(f"Requested book {book_details}")
+            print('loggin?')
             return JSONResponse({'book': book_details}, status_code = 200)
         else:
             return JSONResponse({'message': 'Book not found'}, status_code = 404)
