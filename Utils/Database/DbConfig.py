@@ -4,19 +4,17 @@ from typing import Dict, Optional
 
 
 if os.path.exists('.env'):
-    database = get_key('.env', 'DBNAME')
-    user = get_key('.env', 'USER')
-    password = get_key('.env', 'PASSWORD')
-    host = get_key('.env', 'HOST')
-    port = get_key('.env', 'PORT')
+    try:
+        database = get_key('.env', 'DBNAME')
+        user = get_key('.env', 'USER')
+        password = get_key('.env', 'PASSWORD')
+        host = get_key('.env', 'HOST')
+        port = get_key('.env', 'PORT')
+        options=f"-c search_path={get_key('.env', 'SCHEMA')}"
+    except Exception:
+        raise Exception("Your .env is not complete. Try checking for missing fields")
 else:
-    # These are specific to our use case, but can be changed.
-    # Default options for EasyPHP MySQL.
-    database = 'biblioteca'
-    user = 'root'
-    password = ''
-    host = 'localhost'
-    port = '3306'
+    raise Exception("No .env found at project root.")
 
 
 database_config: Dict[str, Optional[str]] = {
@@ -25,4 +23,5 @@ database_config: Dict[str, Optional[str]] = {
     "password": password,
     "host": host,
     "port": port,
+    "options": options,
 }

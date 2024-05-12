@@ -1,11 +1,11 @@
 import logging
-import mysql.connector as mysql
+import psycopg2.pool
 from Utils.Database.DbConfig import database_config
 from Utils.Database.DatabaseStartupEvent import on_startup
 
 # on_startup()
 print('creating pool')
-connection_pool = mysql.pooling.MySQLConnectionPool(pool_name = "pool", **database_config)
+connection_pool = psycopg2.pool.SimpleConnectionPool(maxconn=4, minconn=1, **database_config)
 
 
 class Database:
@@ -15,29 +15,29 @@ class Database:
 
     def open(self):
         try:
-            self.conn = connection_pool.get_connection()
-        except mysql.Error as err:
+            self.conn = connection_pool.getconn()
+        except psycopg2.Error as err:
             logging.error(f'Error connecting to the platform (connection): {err}')
             raise
 
         # getting the cursor
         try:
-            self.cursor = self.conn.cursor(buffered = True)
-        except mysql.Error as err:
+            self.cursor = self.conn.cursor()
+        except psycopg2.Error as err:
             logging.error(f'Error connecting to the platform (cursor): {err}')
         return self.conn
 
     def close(self):
         try:
             self.cursor.close()
-            self.conn.close()
-        except mysql.Error as err:
+            connection_pool.putconn(self.conn)
+        except psycopg2.Error as err:
             print(f'Error while closing the connection: {err}')
 
     def commit(self):
         try:
             self.conn.commit()
-        except mysql.Error as ce:
+        except psycopg2.Error as ce:
             print(f'Error committing changes: {ce}')
 
     def get_cursor(self):
