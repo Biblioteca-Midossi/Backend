@@ -1,5 +1,6 @@
 -- create schema if not exists Sql1259724_5; -- very dangerous B)
-use Sql1259724_5; -- It's already there, right? :)
+\c postgres;
+set search_path to sql1259724_5; -- It's already there, right? :)
 
 -- Tabella test :P
 create table if not exists test(
@@ -14,7 +15,7 @@ create table if not exists istituti (
 
 -- Tabella collocazioni
 create table if not exists collocazioni (
-    id_collocazione int auto_increment not null PRIMARY KEY, -- Id della collocazione
+    id_collocazione serial not null PRIMARY KEY, -- Id della collocazione
     id_istituto int, -- Id dell'istituto
     scaffale varchar(3), -- Collocazione
 
@@ -23,7 +24,7 @@ create table if not exists collocazioni (
 
 -- Tabella utenti
 create table if not exists utenti (
-    id_utente int auto_increment not null primary key, -- Id utente
+    id_utente serial not null primary key, -- Id utente
     cognome varchar(50) not null, -- Cognome utente
     nome varchar(50) not null, -- Nome utente
     id_istituto int, -- Id istituto apparentenenza
@@ -33,7 +34,7 @@ create table if not exists utenti (
 
 -- Tabella autori (LIMITE UN AUTORE .. magari descrizione con altri autori. (indviduare Principale autore, loro)
 create table if not exists autori (
-    id_autore int auto_increment primary key, -- Id dell'autore
+    id_autore serial primary key, -- Id dell'autore
     nome varchar(50), -- Nome autore
     cognome varchar(50) -- Cognome autore
 );
@@ -53,7 +54,7 @@ create table if not exists libri (
 
     thumbnail_path varchar(256), -- percorso della copertina del libro
 
-    id_libro int auto_increment primary key,
+    id_libro serial primary key,
 
     foreign key (id_collocazione) references collocazioni(id_collocazione),
     foreign key (id_autore) references autori(id_autore)
@@ -61,14 +62,14 @@ create table if not exists libri (
 
 -- Tabella prenotazioni
 create table if not exists prenotazioni (
-    id_prenotazione int not null auto_increment primary key, -- Id della prenotazione
+    id_prenotazione serial not null primary key, -- Id della prenotazione
     id_utente int not null, -- Id dell'utente che ha effettuato la prenozatione
-    isbn_libro int not null, -- Identificativo del libro
+    id_libro int not null, -- Identificativo del libro
     inizio_prenotazione date not null, -- Data inizio prenotazione
     fine_prenotazione date not null, -- Data fine prenotazione
 
     foreign key (id_utente) references utenti(id_utente),
-    foreign key (isbn_libro) references libri(isbn)
+    foreign key (id_libro) references libri(id_libro)
 );
 
 -- can use this if you don't have root acces, just uncomment
@@ -76,10 +77,11 @@ create table if not exists prenotazioni (
 
 -- Queries to populate PK tables
 -- biblioteca.istituti
-insert ignore into
+insert into
     istituti(id_istituto, nome_istituto)
 VALUES
     (1, 'ITT'),
     (2, 'LAC'),
     (3, 'LAV'),
-    (4, 'EXT');
+    (4, 'EXT')
+on conflict do nothing;

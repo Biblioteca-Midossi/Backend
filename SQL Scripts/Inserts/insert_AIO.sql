@@ -1,4 +1,7 @@
-insert into Sql1259724_5.autori (id_autore, nome, cognome)
+\c postgres;
+set search_path to sql1259724_5;
+
+insert into sql1259724_5.autori (id_autore, nome, cognome)
 values  (1, 'Vale', 'Vale'),
         (2, 'J.K ', 'Rowling'),
         (3, 'Italo', 'Calvino'),
@@ -24,28 +27,52 @@ values  (1, 'Vale', 'Vale'),
         (12, 'Dino', 'Buzzati'),
         (13, 'Pieter', 'Aspe'),
         (14, 'Charlotte', 'Brontë'),
-        (44, 'Cesare', 'Segre');
+        (44, 'Cesare', 'Segre'),
+        (45, 'GIORGIO', 'BASSANI'),
+        (46, 'MARIE-AUDE', 'MURAIL'),
+        (47, 'Suzanne', 'Collins'),
+        (48, 'QUIRINO', 'GALLI'),
+        (49, 'GIORGIO', 'MONTEFOSCHI'),
+        (50, 'OTTAVIO', 'SABATUCCI'),
+        (51, 'ALDO', 'GABRIELLI'),
+        (52, 'Marie-Henri', 'Beyle'),
+        (53, 'Elena', 'Ferrante'),
+        (54, 'Khaled ', 'Hosseini'),
+        (55, 'GUY', 'DE MAUPASSANT'),
+        (56, 'ELSA', 'MORANTE'),
+        (57, 'Ernest ', 'Hemingway'),
+        (58, 'PROSPER', 'Mérimée'),
+        (59, 'PATRICK', 'MODIANO'),
+        (60, 'Beppe', 'Fenoglio'),
+        (61, 'Ugo', 'Foscolo'),
+        (62, 'Giacomo', 'Noventa'),
+        (63, 'Paolo', 'Giordano'),
+        (64, 'Ernest', ' Hemingway'),
+        (65, 'MARTIN', 'WALKER'),
+        (66, 'Gustave', 'Flaubert'),
+        (67, 'Anne ', 'Frank'),
+        (68, 'BONAVENTURA', 'TECCHI'),
+        (69, 'Francis', 'Scott Fitzgerald'),
+        (70, 'Johann ', 'Goethe')
+on conflict do nothing;
 
-insert into Sql1259724_5.istituti (id_istituto, nome_istituto)
-values  (1, 'ITT'),
-        (2, 'LAC'),
-        (3, 'LAV'),
-        (4, 'EXT');
-
-insert into Sql1259724_5.collocazioni (id_collocazione, id_istituto, scaffale)
+insert into sql1259724_5.collocazioni (id_collocazione, id_istituto, scaffale)
 values  (1, 1, 'F57'),
         (2, 1, 'A03'),
         (3, 1, 'C02'),
+        (39, 1, 'B3'),
         (4, 1, 'A01'),
         (5, 1, 'B01'),
         (6, 1, 'C01'),
         (33, 1, 'A1'),
+        (38, 1, 'B03'),
         (34, 1, 'A88'),
         (37, 1, 'B2'),
         (36, 1, 'C2'),
-        (35, 1, 'B02');
+        (35, 1, 'B02')
+on conflict do nothing;
 
-insert into Sql1259724_5.libri (id_collocazione, id_autore, isbn, titolo, genere, quantita, casa_editrice, descrizione, thumbnail_path, id_libro)
+insert into sql1259724_5.libri (id_collocazione, id_autore, isbn, titolo, genere, quantita, casa_editrice, descrizione, thumbnail_path, id_libro)
 values  (1, 1, 'Vale', 'Vale', 'Vale', 7, 'Vale', 'Vale', 'assets/thumbnails/VALE.png', 1),
         (3, 3, '978-88-04-66789-6', 'Il visconte dimezzato', 'Narrativa', 1, 'Mondadori', '"Il visconte dimezzato" di Italo Calvino racconta la storia di Visconte Medardo dimezzato da un cannone: metà gentile, metà crudele. Esplora identità e dualità in un''atmosfera fantastica e sognante.', 'assets/thumbnails/978-88-04-66789-6.png', 2),
         (3, 3, '978-88-04-66795-7', 'Il cavaliere inesistente', 'Narrativa', 1, 'Mondadori', '"Il cavaliere inesistente" di Italo Calvino segue le gesta di Agilulfo, un cavaliere che non esiste fisicamente ma incarna l''ideale cavalleresco. La storia esplora temi di onore, identità e realtà in un contesto fantastico-medievale.', 'assets/thumbnails/978-88-04-66795-7.png', 3),
@@ -95,4 +122,36 @@ Il romanzo è sostenuto da un intreccio continuo di vicende personali ed affetti
 
 ', 'assets/thumbnails/1.png', 35),
         (2, 42, '9788861752535', 'Lo strano caso del Dr Jekyll e Mr Hyde', 'Narrativa', 1, 'JoyBooK', 'Lo strano caso del dottor Jekyll e del signor Hyde è un racconto gotico dello scrittore Robert Louis Stevenson. Tratta la storia di un avvocato londinese, Gabriel John Utterson, il quale investiga i singolari episodi tra il suo vecchio amico, il dottor Jekyll, e il malvagio signor Hyde.', 'assets/thumbnails/9788861752535.png', 36),
-        (2, 44, '9788806219352', 'Primo Levi: Se Questo é Un Uomo', 'Romanzo', 1, 'Einaudi', 'Se questo è un uomo è un''opera memorialistica di Primo Levi scritta tra il dicembre 1945 e il gennaio 1947. Rappresenta la coinvolgente ma meditata testimonianza di quanto vissuto dall''autore nel campo di concentramento di Auschwitz', 'assets/thumbnails/9788806219352.png', 37);
+        (2, 44, '9788806219352', 'Primo Levi: Se Questo é Un Uomo', 'Romanzo', 1, 'Einaudi', 'Se questo è un uomo è un''opera memorialistica di Primo Levi scritta tra il dicembre 1945 e il gennaio 1947. Rappresenta la coinvolgente ma meditata testimonianza di quanto vissuto dall''autore nel campo di concentramento di Auschwitz', 'assets/thumbnails/9788806219352.png', 37),
+        (4, 45, '88-04-32055-9', 'IL GIARDINO DEI FINZI-CONTINI', 'NARRATIVA', 1, 'ARNALDO MONDADORI EDITORE', 'Il giardino dei Finzi-Contini racconta l''amore, l''amicizia, i progetti di vita e le partite a tennis di alcuni ragazzi ebrei di Ferrara perfettamente integrati nella vita della città, durante gli anni dell''università, mentre l''Italia si allea con la Germania ed entra in guerra.', 'assets/thumbnails/88-04-32055-9.png', 38),
+        (4, 46, '978-88-09-75724-0', 'MISS CHARITY', 'NARRATIVA', 1, 'GIUNTI', 'Descrizione. Charity è una bambina piena di curiosità, assetata di contatti umani, di parole e di scambi. Vuole partecipare alla vita del mondo. Purtroppo, però, una ragazzina della buona società inglese dell''800 deve tacere, non mostrarsi troppo, salvo che in chiesa.', 'assets/thumbnails/978-88-09-75724-0.png', 39),
+        (2, 47, '9788804658245', 'Hunger Games. La trilogia', 'Romanzo, Fantascienza', 1, 'Oscar mondadori', 'Hunger Games è una serie di romanzi di fantascienza distopica per ragazzi scritta da Suzanne Collins', 'assets/thumbnails/9788804658245.png', 40),
+        (4, 48, 'PRIVO8', 'LA CANGIARA', 'NARRATIVA', 2, 'AGNESOTTI', '“La Congiura dei Lampugnani” è un’opera d’arte di Francesco Hayez che rappresenta un episodio storico avvenuto il 26 dicembre 1476 a Milano. Il dipinto narra il complotto ordito da Giovanni Andrea Lampugnani, Girolamo Olgiati e Carlo Visconti contro il duca Galeazzo Maria Sforza. L’opera è esposta presso la Pinacoteca di Brera a Milano e risale al periodo tra gli anni 1826 e 18291.
+
+Nel dipinto, i tre giovani si apprestano a compiere il loro gesto e salutano il loro protettore, Cola Montano, sotto la statua di Sant’Ambrogio, patrono di Milano. Il duca invece entra nella chiesa sul fondo a sinistra. Hayez ha creato una scenografia medievale, raffigurando l’interno della chiesa in stile Romanico-Gotico, nonostante all’epoca fosse in realtà in stile barocco1.', 'assets/thumbnails/PRIVO8.png', 41),
+        (4, 50, 'PRIVO9', 'LA COMMEDIA NOSTRA', 'NARRATIVA', 3, 'Gruppo Teatrale Popolare Caprarola', 'Il gruppo teatrale popolare di caprarola ha voluto realizzare questo libro per raccogliere insieme le 5 commedie rappresentate con appassionata disinteressata partecipazione.', 'assets/thumbnails/PRIVO9.png', 42),
+        (4, 51, '000000000000000000000', 'SI DICE O NON SI DICE', 'NARRATIVA', 1, 'MONDADORI', 'Si dice o non si dice? di Aldo Gabrielli, nato dall’attività giornalistica e divulgativa del grande linguista, è una guida pratica ed efficace per tutti coloro che vogliono parlare e scrivere un italiano corretto ma adeguato alle necessità di comunicazione della società attuale. Parte da casi concreti e offre risposte immediate a migliaia di dubbi e domande generati dall’uso quotidiano della lingua. In questa seconda edizione ampliata e aggiornata trovano spazio i dubbi più recenti di grammatica e ortografia che derivano dalla continua evoluzione della lingua viva. Le voci, presentate in ordine alfabetico, sono facilmente reperibili. Per ognuna viene fornita una risposta immediata e chiara, seguita da un approfondimento linguistico per chi voglia saperne di più. Un libro utilissimo per imparare, ma anche piacevole da leggere, per lo stile agile e accattivante e per la ricchezza di notizie curiose, spesso risalenti ai tempi remoti in cui hanno avuto origine la nostra lingua e la nostra cultura.', 'assets/thumbnails/000000000000000000000.png', 43),
+        (2, 52, '9788854172432', 'Il rosso e il nero', 'Romanzo, Narrativa psicologica, Romanzo di formazione', 1, 'NEWTON COMPTON EDITORI', 'Il rosso e il nero. Cronaca del 1830 è un romanzo storico dello scrittore francese Stendhal. Il protagonista, Julien Sorel, è un giovane uomo della provincia francese di modesta educazione, il quale tenta di salire la scala sociale attraverso una combinazione di talento, duro lavoro, inganno e ipocrisia. ', 'assets/thumbnails/9788854172432.png', 44),
+        (38, 53, '9788866320326', 'L''AMICA GENIALE:Infanzia, adolescenza', 'Romanzo, Narrativa', 1, 'Edizioni e/o', 'L''amica geniale è un romanzo italiano di Elena Ferrante, pubblicato nel 2011. È il primo volume della serie letteraria omonima, che proseguirà con altri tre romanzi: Storia del nuovo cognome, Storia di chi fugge e di chi resta, Storia della bambina perduta.', 'assets/thumbnails/9788866320326.png', 45),
+        (39, 54, '9788868367305', 'Il Cacciatore di Aquiloni ', 'Romanzo', 1, 'pickwick', 'Il cacciatore di aquiloni è il primo romanzo dello scrittore afghano-americano Khaled Hosseini, pubblicato nel 2003.', 'assets/thumbnails/9788868367305.png', 46),
+        (4, 55, '0', 'LA CASA TELLIER', 'NARRATIVA', 1, 'SANSONI EDITORE FIRENZE', 'Madame Tellier è una dignitosa vedova senza figli che dirige, senza provare alcun sentimento di vergogna, una casa di tolleranza in Normandia («aveva abbracciato quella professione proprio come avrebbe fatto la modista o la ricamatrice»[1]). La casa è frequentata da composti e abitudinari borghesi della cittadina (l''ex sindaco, l''armatore, il banchiere, ecc.). Madame Tellier si reca con le cinque ragazze della casa in un paesetto per la prima comunione del figlio del fratello. In chiesa, durante la funzione religiosa, le prostitute sentono nostalgia dell''antica purezza, e la loro commossa pietà diventa motivo di edificazione per i fedeli e per il celebrante («Con la vostra fede palese e la vostra pietà così viva, siete state per tutti un salutare esempio»). Terminata la cerimonia, ritornano tutte alla loro vita abituale e, dopo la breve assenza, i clienti le ritrovano più allegre e sensuali.', 'assets/thumbnails/0.png', 47),
+        (38, 53, '9788866321811', 'Storia del nuovo cognome', 'Narrativa', 1, 'Edizioni e/o', 'Storia del nuovo cognome è un romanzo del 2012 scritto da Elena Ferrante e pubblicato in Italia da E/O. È il secondo romanzo della serie L''amica geniale, preceduto da L''amica geniale del 2011 e seguito da Storia di chi fugge e di chi resta del 2013 e Storia della bambina perduta del 2014.', 'assets/thumbnails/9788866321811.png', 48),
+        (4, 56, '8804301430', 'morante opere', 'NARRATIVA', 1, 'mondadori', 'Elsa Morante è stata una scrittrice, saggista, poetessa e traduttrice italiana di grande rilievo, particolarmente nota per le sue opere narrative del secondo dopoguerra. Tra le sue opere più importanti troviamo', 'assets/thumbnails/8804301430.png', 49),
+        (38, 57, '9788804701187', 'Il Vecchio E il Mare', 'Romanzo', 1, 'Mondadori', 'Un uomo può essere distrutto, ma non sconfitto.» Il vecchio e il mare è un breve romanzo dello scrittore americano Ernest Hemingway: scritto nel 1951, fu pubblicato sulla rivista Life nel 1952', 'assets/thumbnails/9788804701187.png', 50),
+        (4, 58, '00000000000', 'RACCONTI E NOVELLE', 'NARRATIVA', 1, 'SANSONI EDITORE FIRENZE', 'Firenze, Sansoni, 1966, 16mo brossura con copertina illustrata a colori, pp. 569 (I capolavori, 30).', 'assets/thumbnails/00000000000.png', 51),
+        (38, 53, '9788866325512', 'Storia della bambina perduta', 'Romanzo, Narrativa', 1, 'Edizioni e/o', 'Storia della bambina perduta è un romanzo del 2014 della scrittrice Elena Ferrante e pubblicato in Italia da E/O, precisamente il 29 ottobre 2014. È il quarto e ultimo romanzo della tetralogia de L''amica geniale, preceduto da Storia di chi fugge e di chi resta, pubblicato nel 2013.', 'assets/thumbnails/9788866325512.png', 52),
+        (4, 59, '000000000000000000000000000000000000000000000', 'I VIALI DI CIRCONVALLAZIONE', 'NARRATIVA', 1, 'RUSCONI EDITORE', 'I viali di circonvallazione (Les Boulevards de ceinture, 1972) è il terzo romanzo dello scrittore francese Patrick Modiano pubblicato in prima edizione il 6 ottobre del 1972 e tradotto in italiano l''anno successivo; nel ''72 vinse il premio Grand prix du roman de l''Académie française.', 'assets/thumbnails/000000000000000000000000000000000000000000000.png', 53),
+        (4, 60, '880629363X', 'Il partigiano Johnny', 'NARRATIVA', 1, 'Einaudi', 'Il partigiano Johnny è un romanzo autobiografico incompiuto di Beppe Fenoglio pubblicato postumo nel 1968. È considerato uno dei più importanti romanzi sulla Resistenza oltre che del Novecento italiano.', 'assets/thumbnails/880629363X.png', 54),
+        (38, 61, '9788804644989', 'Ultime Lettere di Jacopo Ortis', 'Romanzo', 1, 'Oscarmondadori', 'Le Ultime lettere di Jacopo Ortis è un romanzo epistolare, composto dalle lettere che il Foscolo immagina scritte da un giovane suicida negli ultimi tempi della sua vita a un amico, Lorenzo Alderani. Questi le pubblica, aggiungendo alcuni collegamenti narrativi e descrive, alla fine, la tragica morte del protagonista.', 'assets/thumbnails/9788804644989.png', 55),
+        (38, 62, 'privo104', 'Storia di un eresia', 'Romanzo', 1, 'Rusconi Editore', 'Questa raccolta di scritti postumi, curata da Franca Noventa e introdotta da un lungo saggio di Rodolfo Quadrelli, è un invito ai lettori affinché riprendano in mano i libri di questo maestro «pericoloso» per gli attuali potenti della cultura italiana. Nella seconda parte del libro si pubblica l’ultima opera di Nd venta, rimasta incompiuta e che doveva comprendere trecento lettere aperte ad amici e a letterati italiani del suo tempo, da Fortini a Debenedetti, da Vittorini a Pampaloni, da Bassani a Sereni, per citarne alcuni. Ne sono giunte a noi soltanto settanta: ma sono un’alta lezione di acutezza critica, di intuizione profetica e di humour.', 'assets/thumbnails/privo104.png', 56),
+        (38, 63, '9788804666639', 'La Solitudine dei Numeri Primi', 'Romanzo', 1, 'Oscar Absolute', 'La solitudine dei numeri primi è il primo romanzo di Paolo Giordano. Romanzo di formazione, narra le vite parallele di Alice e Mattia attraverso le vicende spesso dolorose che ne segnano l''infanzia, l''adolescenza e l''età adulta', 'assets/thumbnails/9788804666639.png', 57),
+        (4, 56, '978-88-06-22264-2', 'L''ISOLA DI ARTURO', 'NARRATIVA', 1, 'EINAUDI', 'L''isola di Arturo è un romanzo di Elsa Morante (Roma 1912-1985) edito da Einaudi e pubblicato nel 1957. Ha valso alla sua autrice il Premio Strega e si colloca nel filone del neorealismo.', 'assets/thumbnails/978-88-06-22264-2.png', 58),
+        (38, 53, '978880466324119', 'storia di chi fugge e di chi resta', 'Romanzo', 1, 'e/o', 'Storia di chi fugge e di chi resta è un romanzo del 2013 della scrittrice italiana Elena Ferrante e pubblicato in Italia da E/O. È il terzo romanzo della serie L''amica geniale, preceduto da Storia del nuovo cognome del 2012 e seguito da Storia della bambina perduta del 2014', 'assets/thumbnails/978880466324119.png', 59),
+        (38, 64, '9788804665021', 'ADDIO ALLE ARMI', 'Romanzo, Narrativa, Letteratura di guerra, Realismo', 1, 'Oscar mondadori', 'Addio alle armi è una storia di amore e di guerra tra Frederic Henry, un giovane americano ricco, e Catherine Barkley. Ernest Hemingway ha sempre sognato una storia d''amore come questa e la descriveva ispirandosi alle sue esperienze sul fronte di guerra nel 1918 in Italia.', 'assets/thumbnails/9788804665021.png', 60),
+        (4, 65, '978-88-200-4740-5', 'BRUNò IL COMMISSARIO FRANCESE', 'NARRATIVA', 1, 'SPERLING & KUPFER', 'Nella cittadina di St. Denis, nel Périgord, la vita scorre tranquilla per Bruno, il capo della polizia locale. Il foie gras è superbo, il vino e i formaggi eccellenti... E in paese non capita mai nulla di grave. Finché un giorno viene scoperto il cadavere sventrato di un uomo, con una svastica incisa sul petto. Da qui cominciano i problemi per il pacioso poliziotto, che tuttavia, proprio grazie ai suoi metodi poco ortodossi, risolverà il caso portando alla luce una verità che affonda le radici nel periodo tormentato della Seconda guerra mondiale. Originale e ben congegnata, la prima indagine dell''investigatore che la critica ha salutato come il "Maigret" del Périgord.', 'assets/thumbnails/978-88-200-4740-5.png', 61),
+        (38, 66, '9788807900983', 'Madame Bovary', 'Romanzo', 1, 'Feltrinelli', 'Madame Bovary. Mœurs de province, abbreviato normalmente in Madame Bovary, è uno dei romanzi più importanti di Gustave Flaubert, pubblicato dapprima a puntate sul giornale «La Revue de Paris» tra il 1 ottobre e il 15 dicembre 1856.', 'assets/thumbnails/9788807900983.png', 62),
+        (38, 67, '9788806230142', 'Diario, Anne Frank', 'Biografia, Autobiografia, Letteratura ebraica', 1, 'Einaudi', 'Nel suo diario Anna Frank parla delle angosce, delle illusioni, dei sogni, della speranza, della distribuzione del cibo, dei turni in bagno, del cibo che non arriva, delle malattie temute e dello svolgimento della guerra.', 'assets/thumbnails/9788806230142.png', 63),
+        (4, 68, '0000000', 'GLI ONESTI', 'NARRATIVA', 1, 'BOMPIANI', '(Bagnoregio, Viterbo, 1896 - Roma 1968) narratore e saggista italiano. Germanista, tenne la cattedra di letteratura tedesca nell’ateneo romano. Esordì nella narrativa con Il nome sulla sabbia (1924), pubblicando poi una serie di romanzi, racconti e prose varie che hanno al centro sottili problemi morali e psicologici, indagati secondo un’ottica cristiana e affidati a uno stile d’impronta classica. Fra i suoi libri più riusciti, soprattutto nel disegno di caratteri femminili, si ricordano: Il vento tra le case (1928), Tre storie d’amore (1931), I Villatauri (1935), Ernestina (1936), Valentina Velier (1950), Storie di bestie (1957), Gli egoisti (1959). Numerosi i volumi di saggi: Wackenroder (1927), Carossa (1947), L’arte di Thomas Mann (1956), Svevia, terra di poeti (1964), Goethe scrittore di fiabe (1966), Il senso degli altri (1968).', 'assets/thumbnails/0000000.png', 64),
+        (38, 69, '9788822706119', 'Il Grande Gatsby', 'Romanzo', 1, 'Edizione Integrale', 'Il grande Gatsby è un romanzo di Francis Scott Fitzgerald pubblicato per la prima volta a New York il 10 aprile 1925 e definito da T.S. Eliot «il primo passo in avanti fatto dalla narrativa americana dopo Henry James', 'assets/thumbnails/9788822706119.png', 65),
+        (38, 70, '97888079007863', 'I Dolori del Giovane Werther', 'Romanzo', 1, 'Demetra', ' dolori del giovane Werther è un romanzo epistolare di Johann Wolfgang Goethe pubblicato nel 1774. Il Werther appartiene all''età giovanile di Goethe ed è considerato opera simbolo del movimento dello Sturm und Drang, anticipando molti temi che saranno propri del romanticismo tedesco', 'assets/thumbnails/97888079007863.png', 66)
+on conflict do nothing;

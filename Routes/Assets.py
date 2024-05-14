@@ -8,12 +8,15 @@ router = APIRouter(
     responses = {
         404: {
             "description": "Not found"
+        },
+        200: {
+            "content": {"image/png": {}}
         }
-    }
+    },
 )
 
 
-@router.get("/thumbnails/{isbn}.png")
+@router.get("/thumbnails/{isbn}.png", response_class = FileResponse)
 async def get_thumbnail(isbn: str):
     try:
         thumbnail_path = f"./assets/thumbnails/{isbn}.png"
