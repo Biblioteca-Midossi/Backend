@@ -1,5 +1,8 @@
 import io
 import logging
+
+import psycopg2
+
 logging = logging.getLogger('FileLogger')
 import os
 from typing import Annotated
@@ -11,9 +14,9 @@ from Utils.Database.DbHelper import Database
 from PIL import Image
 
 router = APIRouter(
-    prefix="/insert",
-    tags=['insert'],
-    responses={404: {"description": "Not found"}}
+    prefix = "/insert",
+    tags = ['insert'],
+    responses = {404: {"description": "Not found"}}
 )
 
 
@@ -111,11 +114,11 @@ async def covert_to_png(file_content: bytes):
         with Image.open(io.BytesIO(file_content)) as img:
             img = img.convert('RGB')
             png_bytes = io.BytesIO()
-            img.save(png_bytes, format='PNG')
+            img.save(png_bytes, format = 'PNG')
             return png_bytes.getvalue()
     except Exception as e:
         logging.error(f"Error converting image to PNG: {e}")
-        raise HTTPException(status_code=500, detail="Error converting image to PNG")
+        raise HTTPException(status_code = 500, detail = "Error converting image to PNG")
 
 
 @router.post('/thumbnail/{isbn}')
@@ -126,7 +129,7 @@ async def upload_thumbnail(isbn: str, file: Annotated[UploadFile, File(...)]):
 
         # Make sure the directory is there
         save_directory = './assets/thumbnails/'
-        os.makedirs(save_directory, exist_ok=True)
+        os.makedirs(save_directory, exist_ok = True)
 
         # Save the uploaded file
         file_path = os.path.join(save_directory, f'{isbn}.png')
@@ -140,11 +143,11 @@ async def upload_thumbnail(isbn: str, file: Annotated[UploadFile, File(...)]):
                            (file_path[2:], isbn))
             db.commit()
 
-        return JSONResponse({'status': 'successful'}, status_code=200)
+        return JSONResponse({'status': 'successful'}, status_code = 200)
 
     except Exception as e:
         logging.error(f"Error uploading thumbnail: {e}")
-        raise HTTPException(status_code=500, detail="Error uploading thumbnail")
+        raise HTTPException(status_code = 500, detail = "Error uploading thumbnail")
 
 
 async def insert_book_into_database(data: list[str]):
@@ -172,23 +175,26 @@ async def insert_book_into_database(data: list[str]):
                 cursor = db.get_cursor()
                 cursor.execute("update libri set quantita = libri.quantita + 1 "
                                "where isbn = %s", (libro.get('isbn'),))
-            return {"message": "The Book is already in the database"}, 200
+            return JSONResponse(
+                {"message": "The Book is already in the database and the inventory has been updated"},
+                200
+            )
 
         id_collocazione = insert_collocazione(collocazione)
         id_autore = insert_autore(autore)
         insert_libro(libro, id_autore, id_collocazione)
         logging.info(f"Book '{libro['titolo']}' inserted successfully into the database.")
-        return {"status": "successful"}, 200
+        return JSONResponse({"status": "successful"}, 200)
 
     except InvalidRequestError as e:
         logging.error(f"Invalid request: {e}.")
-        raise HTTPException(status_code=400, detail=str(e))
-    except DatabaseError as e:
+        raise HTTPException(status_code = 400, detail = str(e))
+    except psycopg2.Error as e:
         logging.error(f"Database error: {e}.")
-        raise HTTPException(status_code=500, detail="Database error")
+        raise HTTPException(status_code = 500, detail = "Database error")
     except Exception as e:
         logging.error(f"Unexpected error: {e}")
-        raise HTTPException(status_code=500, detail="Unexpected error")
+        raise HTTPException(status_code = 500, detail = "Unexpected error")
 
 
 @router.post("/")
@@ -199,13 +205,13 @@ async def insert(request: Request):
         # Check for empty fields
         for entry in data:
             if entry != data[9] and entry == '':
-                return JSONResponse({'error': 'Bad request'}, status_code=400)
+                return HTTPException(status_code = 400, detail = "Bad request")
 
         # Add entry to database
-        response = await insert_book_into_database(data)
+        response: JSONResponse = await insert_book_into_database(data)
 
-        return JSONResponse(*response)
+        return response
 
     except Exception as e:
         logging.error(f"Unexpected error: {e}")
-        raise HTTPException(status_code=500, detail="Unexpected error")
+        raise HTTPException(status_code = 500, detail = "Unexpected error")
