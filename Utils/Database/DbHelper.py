@@ -1,7 +1,7 @@
 import logging
 import psycopg2.pool
 from Utils.Database.DbConfig import database_config
-from Utils.Database.DatabaseStartupEvent import on_startup
+# from Utils.Database.DatabaseStartupEvent import on_startup
 
 log = logging.getLogger('FileLogger')
 
