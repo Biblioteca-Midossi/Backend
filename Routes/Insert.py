@@ -120,6 +120,26 @@ async def covert_to_png(file_content: bytes):
 
 @router.post('/thumbnail/{isbn}')
 async def upload_thumbnail(isbn: str, file: Annotated[UploadFile, File(...)]):
+    """
+    Upload and save a thumbnail for a book.
+    
+    **Path**: `/insert/thumbnail/{isbn}`
+    
+    **Method**: `POST`
+    
+    **Description**:
+    Uploads a thumbnail image for a book identified by its ISBN. The image is converted to PNG format before being saved.
+    
+    **Arguments**:
+    - `isbn` (str): The ISBN of the book.
+    - `file` (UploadFile): The uploaded image file.
+    
+    **Returns**:
+    - JSONResponse: Status message indicating success.
+    
+    **Raises**:
+    - HTTPException: If there is an error uploading the thumbnail.
+    """
     try:
         # Convert to PNG
         png_bytes = await covert_to_png(await file.read())
@@ -193,6 +213,25 @@ async def insert_book_into_database(data: list[str]):
 
 @router.post("/")
 async def insert(request: Request):
+    """
+    Insert a book into the database via a JSON request.
+    
+    **Path**: `/insert/`
+    
+    **Method**: `POST`
+    
+    **Description**:
+    Receives a JSON request containing book details and inserts the book into the database. If the book already exists, it updates the quantity.
+    
+    **Arguments**:
+    - `request` (Request): The request object containing the JSON payload.
+    
+    **Returns**:
+    - JSONResponse: Status message indicating success or failure.
+    
+    **Raises**:
+    - HTTPException: If there is an unexpected error.
+    """
     try:
         data = await request.json()
 

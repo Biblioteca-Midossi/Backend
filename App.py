@@ -18,7 +18,13 @@ async def lifespan(app: FastAPI):
     print("Shutting down..")
 
 
-biblioteca = FastAPI(lifespan = lifespan, root_path = '/api')
+biblioteca = FastAPI(
+    lifespan = lifespan, 
+    root_path = '/api', 
+    swagger_ui_parameters={
+        "syntaxHighlight.theme": "obsidian"
+        }
+    )
 
 origins = [
     "http://127.0.0.1",

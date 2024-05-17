@@ -139,6 +139,25 @@ async def get_current_active_user(
 async def login_for_token_access(
         form_data: Annotated[OAuth2PasswordRequestForm, Depends()]
 ) -> Token:
+    """
+    OAuth2 Token Login
+    
+    **Path**: `/token`
+    
+    **Method**: `POST`
+    
+    **Description**:
+    OAuth2 compatible token login, get an access token for future requests.
+    
+    **Arguments**:
+    - `form_data`: Form data containing the username and password.
+    
+    **Returns**:
+    - `Token`: A token object containing the access token and token type.
+    
+    **Raises**:
+    - `HTTPException`: If authentication fails.
+    """
     user = authenticate_user(fake_users_db, form_data.username, form_data.password)
     if not user:
         print('not user /token')
@@ -158,6 +177,22 @@ async def login_for_token_access(
 async def read_users_me(
         current_user: Annotated[User, Depends(get_current_active_user)]
 ):
+    """
+    Get Current User Information
+    
+    **Path**: `/users/me`
+    
+    **Method**: `GET`
+    
+    **Description**:
+    Retrieve the current user's information.
+    
+    **Arguments**:
+    - `current_user`: The current active user.
+    
+    **Returns**:
+    - `User`: The current user's information.
+    """
     return current_user
 
 
@@ -165,4 +200,20 @@ async def read_users_me(
 async def read_own_items(
         current_user: Annotated[User, Depends(get_current_active_user)]
 ):
+    """
+    Get Current User's Items
+    
+    **Path**: `/users/me/items`
+    
+    **Method**: `GET`
+    
+    **Description**:
+    Retrieve items owned by the current user.
+    
+    **Arguments**:
+    - `current_user`: The current active user.
+    
+    **Returns**:
+    - `List[Dict]`: A list of items owned by the current user.
+    """
     return [{"item_id": "Foo", "owner": current_user.username}]
