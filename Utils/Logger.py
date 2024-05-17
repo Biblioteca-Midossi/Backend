@@ -16,4 +16,4 @@ def setup_logger():
         format = '%(levelname)s %(asctime)s %(message)s',
         datefmt = '%d/%m/%Y %I:%M:%S %p'
     )
-    print("Logger setup completed.")
+    print("Logger setup completed. Logs will not be logged to file")

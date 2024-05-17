@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Path
+from fastapi import APIRouter, HTTPException, Path
 from fastapi.responses import JSONResponse
 
 from Utils.Database.DbHelper import Database
@@ -41,6 +41,7 @@ async def getBooks():
         cursor.execute("select l.titolo, a.nome, a.cognome, l.id_libro, l.thumbnail_path "
                        "from libri as l, autori as a "
                        "where l.id_autore = a.id_autore")
+        
         # assigns the result of the query to `raw_books`.
         raw_books: list = cursor.fetchall()
 
@@ -53,7 +54,7 @@ async def getBooks():
                 "coverUrl": book[4]
             } for book in raw_books
         ]
-    return JSONResponse({'books': books}, status_code = 200)
+    return JSONResponse({'books': books}, 200)
 
 
 @router.get('/{book_id}')
@@ -95,7 +96,6 @@ async def getBook(book_id: int = Path(...)):
                 "coverUrl": book[5]
             }
             log.info(f"Requested book {book_details}")
-            print('loggin?')
-            return JSONResponse({'book': book_details}, status_code = 200)
+            return JSONResponse({'book': book_details}, 200)
         else:
-            return JSONResponse({'message': 'Book not found'}, status_code = 404)
+            raise HTTPException(404, 'Book not found', )

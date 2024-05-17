@@ -1,6 +1,9 @@
 # Jetbrains IDE files
 .idea
 
+# VSCode settings
+.vscode
+
 # Python runtime files
 __pycache__
 

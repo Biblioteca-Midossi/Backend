@@ -1,3 +1,4 @@
+import logging
 from datetime import datetime, timedelta, timezone
 from typing import Annotated
 
@@ -6,6 +7,8 @@ from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
 from jose import JWTError, jwt
 from passlib.context import CryptContext
 from pydantic import BaseModel
+
+log = logging.getLogger('FileLogger')
 
 token_router = APIRouter(
     responses = {
@@ -29,7 +32,6 @@ router = APIRouter(
 # On linux or a linux-like enviroment, regenerate this using:
 # openssl rand -hex 32
 # Also should put this block inside `.env` and pass it over enviroments.
-# SECRET_KEY = "75c5ff4dd65e64eae38d2a92c1387eb55708d0ba6c9816c461ab51ebf42ee3d8"
 
 SECRET_KEY = "09d25e094faa6ca2556c818166b7a9563b93f7099f6f0f4caa6cf63b88e8d3e7"
 ALGORITHM = "HS256"
@@ -88,10 +90,10 @@ def get_user(db, username: str):
 def authenticate_user(fake_db, username: str, password: str):
     user = get_user(fake_db, username)
     if not user:
-        print('not user authenticate_user')
+        log.info(f"User {username} tried to login but no account was found!")
         return False
     if not verify_password(password, user.hashed_password):
-        print('password not verified')
+        log.info(f'User {username} tried to login but got the password wrong')
         return False
     return user
 
@@ -131,6 +133,7 @@ async def get_current_active_user(
         current_user: Annotated[User, Depends(get_current_user)]
 ):
     if current_user.disabled:
+        log.info(f"User {current_user.username} tried to login while inactive")
         raise HTTPException(status_code = 400, detail = "Inactive user")
     return current_user
 
@@ -160,7 +163,7 @@ async def login_for_token_access(
     """
     user = authenticate_user(fake_users_db, form_data.username, form_data.password)
     if not user:
-        print('not user /token')
+        log.info(f'User {form_data.username} tried to login but failed')
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Incorrect username or password",

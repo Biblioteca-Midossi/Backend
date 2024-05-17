@@ -1,4 +1,5 @@
 import asyncio
+import logging
 from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
@@ -9,13 +10,17 @@ from Utils.Logger import setup_logger
 setup_logger()
 
 
+log = logging.getLogger('FileLogger')
+
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     # Run at startup
-    print("Starting application..")
+    log.info("Starting Application..")
     await asyncio.create_task(register_routes(app))
+    log.info("Application started and ready!")
     yield
-    print("Shutting down..")
+    log.info("Shutting down..")
 
 
 biblioteca = FastAPI(
