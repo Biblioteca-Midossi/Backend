@@ -54,13 +54,10 @@ def insert_collocazione(collocazione: dict[str, str]) -> int:
             return id_collocazione[0]
         else:
             cursor.execute('insert into collocazioni'
-                           '(id_istituto, scaffale) values (%s, %s)',
+                           '(id_istituto, scaffale) values (%s, %s) '
+                           'returning id_collocazione',
                            (id_istituto, scaffale))
             db.commit()
-
-            cursor.execute('select id_collocazione from collocazioni '
-                           'where scaffale = %s and id_istituto = %s',
-                           (scaffale, id_istituto))
             return cursor.fetchone()[0]
 
 
@@ -79,14 +76,11 @@ def insert_autore(autore: dict[str, str]) -> int:
             return author[0]
         else:
             cursor.execute('insert into autori '
-                           '(nome, cognome) values (%s, %s)',
+                           '(nome, cognome) values (%s, %s) '
+                           'returning id_autore',
                            (nome, cognome))
             db.commit()
-
-            cursor.execute('select id_autore from autori '
-                           'where nome = %s and cognome = %s',
-                           (nome, cognome))
-            return cursor.fetchone()[0]
+            return cursor.fetchone()[0]     # id_autore
 
 
 def insert_libro(libro, id_autore, id_collocazione):
@@ -103,10 +97,12 @@ def insert_libro(libro, id_autore, id_collocazione):
         cursor.execute('insert into libri'
                        '(id_collocazione, id_autore, isbn, titolo, '
                        'genere, quantita, casa_editrice, descrizione) '
-                       'values (%s, %s, %s, %s, %s, %s, %s, %s)',
+                       'values (%s, %s, %s, %s, %s, %s, %s, %s) '
+                       'returning id_libro',
                        (id_collocazione, id_autore, isbn, titolo,
                         genere, quantita, casa_editrice, descrizione))
         db.commit()
+        return cursor.fetchone()[0]
 
 
 async def covert_to_png(file_content: bytes):
@@ -121,8 +117,7 @@ async def covert_to_png(file_content: bytes):
         raise HTTPException(status_code = 500, detail = "Error converting image to PNG")
 
 
-@router.post('/thumbnail/{isbn}')
-async def upload_thumbnail(isbn: str, file: Annotated[UploadFile, File(...)]):
+async def upload_thumbnail(file, book_id):
     """
     Upload and save a thumbnail for a book.
     
@@ -152,15 +147,15 @@ async def upload_thumbnail(isbn: str, file: Annotated[UploadFile, File(...)]):
         os.makedirs(save_directory, exist_ok = True)
 
         # Save the uploaded file
-        file_path = os.path.join(save_directory, f'{isbn}.png')
+        file_path = os.path.join(save_directory, f'{book_id}.png')
         with open(file_path, 'wb') as buffer:
             buffer.write(png_bytes)
 
         with Database() as db:
             cursor = db.get_cursor()
             cursor.execute('update libri '
-                           'set thumbnail_path = %s where isbn = %s',
-                           (file_path[2:], isbn))
+                           'set thumbnail_path = %s where id_libro = %s',
+                           (file_path[2:], book_id))
             db.commit()
 
         return JSONResponse({'status': 'successful'}, status_code = 200)
@@ -170,7 +165,7 @@ async def upload_thumbnail(isbn: str, file: Annotated[UploadFile, File(...)]):
         raise HTTPException(status_code = 500, detail = "Error uploading thumbnail")
 
 
-async def insert_book_into_database(data: list[str]):
+async def insert_book_into_database(data: list[str], file):
     collocazione = {
         'istituto': data[0],
         'scaffale': data[1],
@@ -202,7 +197,8 @@ async def insert_book_into_database(data: list[str]):
 
         id_collocazione = insert_collocazione(collocazione)
         id_autore = insert_autore(autore)
-        insert_libro(libro, id_autore, id_collocazione)
+        id_libro = insert_libro(libro, id_autore, id_collocazione)
+        await upload_thumbnail(file, id_libro)
         logging.info(f"Book '{libro['titolo']}' inserted successfully into the database.")
         return JSONResponse({"status": "successful"}, 200)
 
@@ -218,7 +214,7 @@ async def insert_book_into_database(data: list[str]):
 
 
 @router.post("/")
-async def insert(request: Request):
+async def insert(request: Request, file: Annotated[UploadFile, File(...)]):
     """
     Insert a book into the database via a JSON request.
     
@@ -247,7 +243,7 @@ async def insert(request: Request):
                 return HTTPException(status_code = 400, detail = "Bad request")
 
         # Add entry to database
-        response: JSONResponse = await insert_book_into_database(data)
+        response: JSONResponse = await insert_book_into_database(data, file)
 
         return response
 

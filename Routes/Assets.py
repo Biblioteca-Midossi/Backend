@@ -16,8 +16,8 @@ router = APIRouter(
 )
 
 
-@router.get("/thumbnails/{isbn}.png", response_class = FileResponse)
-async def get_thumbnail(isbn: str):
+@router.get("/thumbnails/{id}.png", response_class = FileResponse)
+async def get_thumbnail(book_id: int):
     """
     Get the thumbnail image for a book by its ISBN.
     
@@ -40,7 +40,7 @@ async def get_thumbnail(isbn: str):
     - HTTPException: If there is an error retrieving the thumbnail.
     """
     try:
-        thumbnail_path = f"./assets/thumbnails/{isbn}.png"
+        thumbnail_path = f"./assets/thumbnails/{book_id}.png"
         if os.path.exists(thumbnail_path):
             return FileResponse(thumbnail_path)
         else:
