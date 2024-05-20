@@ -43,7 +43,7 @@ biblioteca.add_middleware(
     allow_credentials = True,
     allow_methods = ['*'],
     allow_headers = ['*'],
-    allow_origin_regex = "(https?:\/\/)?(192)\.(168)(\.(25[0-5]|2[0-4][0-9]|1[0-9][0-9]|[1-9][0-9]|[0-9])){2}(?::8001)?|localhost(?::8001)?|127.0.0.1(?::8001)?"
+    allow_origin_regex = r"(https?:\/\/)?(192)\.(168)(\.(25[0-5]|2[0-4][0-9]|1[0-9][0-9]|[1-9][0-9]|[0-9])){2}(?::8001)?|localhost(?::8001)?|127.0.0.1(?::8001)?"
 )
 
 
