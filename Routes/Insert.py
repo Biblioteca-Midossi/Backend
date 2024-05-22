@@ -1,4 +1,5 @@
 import io
+import json
 import logging
 
 import psycopg2
@@ -165,7 +166,7 @@ async def upload_thumbnail(file, book_id):
         raise HTTPException(status_code = 500, detail = "Error uploading thumbnail")
 
 
-async def insert_book_into_database(data: list[str], file):
+async def insert_book_into_database(data: list[str], file: UploadFile):
     collocazione = {
         'istituto': data[0],
         'scaffale': data[1],
@@ -213,7 +214,7 @@ async def insert_book_into_database(data: list[str], file):
         raise HTTPException(status_code = 500, detail = "Unexpected error")
 
 
-@router.post("/")
+@router.post("")
 async def insert(request: Request, file: Annotated[UploadFile, File(...)]):
     """
     Insert a book into the database via a JSON request.
@@ -235,16 +236,18 @@ async def insert(request: Request, file: Annotated[UploadFile, File(...)]):
     - HTTPException: If there is an unexpected error.
     """
     try:
-        data = await request.json()
+        form_data = await request.form()
+        data_str = form_data.get('data')
 
-        # Check for empty fields
-        for entry in data:
-            if entry != data[9] and entry == '':
-                return HTTPException(status_code = 400, detail = "Bad request")
+        if not data_str:
+            raise HTTPException(status_code=400, detail="Missing data in the form")
+
+        data = json.loads(data_str)
+        if len(data) != 10:
+            raise HTTPException(status_code = 400, detail = "Data list is not complete")
 
         # Add entry to database
         response: JSONResponse = await insert_book_into_database(data, file)
-
         return response
 
     except Exception as e:
