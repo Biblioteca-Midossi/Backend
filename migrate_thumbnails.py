@@ -14,9 +14,12 @@ with Database() as db:
     ]
 
     for book in books:
-        old_path = f"./assets/thumbnails/{book['isbn']}.png"
-        new_path = f"./assets/thumbnails/{book['id_libro']}.png"
-        os.rename(old_path, new_path)
+        try:
+            old_path = f"./assets/thumbnails/{book['isbn']}.png"
+            new_path = f"./assets/thumbnails/{book['id_libro']}.png"
+            os.rename(old_path, new_path)
+        except FileNotFoundError:
+            continue
 
 
     # print(dict)
