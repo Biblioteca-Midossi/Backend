@@ -1,3 +1,4 @@
+from enum import Enum
 import logging
 import psycopg2.pool
 from Utils.Database.DbConfig import database_config
@@ -6,7 +7,7 @@ from Utils.Database.DbConfig import database_config
 log = logging.getLogger('FileLogger')
 
 # on_startup()
-log.info('Createing connection pool..')
+log.info('Creating connection pool..')
 connection_pool = psycopg2.pool.SimpleConnectionPool(maxconn=4, minconn=1, **database_config)
 log.info('Pool successfully created!')
 
@@ -36,16 +37,35 @@ class Database:
             self.cursor.close()
             connection_pool.putconn(self.conn)
         except psycopg2.Error as close_error:
-            print(f'Error while closing the cursor or the connection: {close_error}')
+            log.error(f'Error while closing the cursor or the connection: {close_error}')
 
     def commit(self):
         try:
             self.conn.commit()
         except psycopg2.Error as commit_error:
-            print(f'Error while committing changes to the database: {commit_error}')
+            log.error(f'Error while committing changes to the database: {commit_error}')
+
+    def rollback(self):
+        try:
+            self.conn.rollback()
+        except psycopg2.Error as rollback_error:
+            log.error(f'Error while committing changes to the database: {rollback_error}')
+
 
     def get_cursor(self):
         return self.cursor
+
+    @staticmethod
+    def fetchone_to_dict(cursor):
+        row = cursor.fetchone()
+        colnames = [desc[0] for desc in cursor.description]
+        return dict(zip(colnames, row))
+
+    @staticmethod
+    def fetchall_to_dict(cursor):
+        rows = cursor.fetchall()
+        colnames = [desc[0] for desc in cursor.description]
+        return [dict(zip(colnames, row)) for row in rows]
 
     def __enter__(self) -> 'Database':
         self.open()

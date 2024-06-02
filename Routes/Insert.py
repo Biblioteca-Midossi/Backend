@@ -228,6 +228,7 @@ async def insert(request: Request, file: Annotated[UploadFile, File(...)]):
     
     **Arguments**:
     - `request` (Request): The request object containing the JSON payload.
+    - `file` (Annotated[UploadFile, File(...)]): The file attached to the FormData.
     
     **Returns**:
     - JSONResponse: Status message indicating success or failure.

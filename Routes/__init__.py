@@ -20,5 +20,5 @@ async def register_routes(app: FastAPI):
     app.include_router(Insert.router)
     app.include_router(Books.router)
     app.include_router(Assets.router)
-    app.include_router(Users.router)
-    app.include_router(Users.token_router)
+    # app.include_router(Users.router)
+    app.include_router(Users.auth_router)

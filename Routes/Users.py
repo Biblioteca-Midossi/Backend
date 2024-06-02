@@ -1,16 +1,27 @@
-import logging
-from datetime import datetime, timedelta, timezone
-from typing import Annotated
+from dotenv import get_key
 
-from fastapi import APIRouter, Depends, HTTPException, status
-from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
-from jose import JWTError, jwt
+from fastapi import APIRouter, Depends, HTTPException, Request, Response
+from fastapi.responses import JSONResponse
+
+from itsdangerous import URLSafeTimedSerializer, BadSignature, SignatureExpired
+
 from passlib.context import CryptContext
+
 from pydantic import BaseModel
 
+from redis import Redis
+
+import logging
+
+from typing import Annotated
+
+from Utils.Database.DbHelper import Database
+
+
 log = logging.getLogger('FileLogger')
+debug = log.debug
 
-token_router = APIRouter(
+auth_router = APIRouter(
     responses = {
         404: {
             "description": "Not found"
@@ -18,205 +29,151 @@ token_router = APIRouter(
     }
 )
 
-router = APIRouter(
-    prefix = '/users',
-    tags = ['users'],
-    responses = {
-        404: {
-            "description": "Not found"
-        }
-    }
-)
+pwd_context = CryptContext(schemes=['bcrypt'])
 
-# In production:
-# On linux or a linux-like enviroment, regenerate this using:
-# openssl rand -hex 32
-# Also should put this block inside `.env` and pass it over enviroments.
+redis = Redis(host = 'localhost', port = 6379, decode_responses = True, password = get_key('.env', 'REDIS_PASSWORD'))
 
-SECRET_KEY = "09d25e094faa6ca2556c818166b7a9563b93f7099f6f0f4caa6cf63b88e8d3e7"
-ALGORITHM = "HS256"
-ACCESS_TOKEN_EXPIRE_MINUTES = 30
-
-fake_users_db = {
-    "johndoe": {
-        "username": "johndoe",
-        "full_name": "John Doe",
-        "email": "johndoe@example.com",
-        "hashed_password": "$2b$12$gbGdR75xExfDiGLHUTj8/.lPCxgNWkU3BhNwecacHHiBHX2qyxRBq",
-        "disabled": False,
-    },
-}
+# Serializer for cookie handling
+serializer = URLSafeTimedSerializer(get_key('.env', 'COOKIE_KEY'))
 
 
-class Token(BaseModel):
-    access_token: str
-    token_type: str
-
-
-class TokenData(BaseModel):
-    username: str | None = None
-
-
-class User(BaseModel):
+class UserForm(BaseModel):
+    nome: str
+    cognome: str
     username: str
-    email: str | None = None
-    full_name: str | None = None
-    disabled: bool | None = None
+    password: str
+    istituto: str | int
+    ruolo: int = 0
 
 
-class UserInDB(User):
-    hashed_password: str
+def create_session_cookie(data: dict, max_age: int = 3600):
+    token = serializer.dumps(data)
+    return token
 
 
-pwd_context = CryptContext(schemes = ["bcrypt"], deprecated = "auto")
-
-oauth2_scheme = OAuth2PasswordBearer(tokenUrl = "token")
-
-
-def verify_password(plain_password, hashed_password):
-    return pwd_context.verify(plain_password, hashed_password)
-
-
-def get_password_hash(password):
-    return pwd_context.hash(password)
-
-
-def get_user(db, username: str):
-    if username in db:
-        user_dict = db[username]
-        return UserInDB(**user_dict)
-
-
-def authenticate_user(fake_db, username: str, password: str):
-    user = get_user(fake_db, username)
-    if not user:
-        log.info(f"User {username} tried to login but no account was found!")
-        return False
-    if not verify_password(password, user.hashed_password):
-        log.info(f'User {username} tried to login but got the password wrong')
-        return False
-    return user
-
-
-def create_access_token(data: dict, expires_delta: timedelta | None = None):
-    to_encode = data.copy()
-    if expires_delta:
-        expire = datetime.now(timezone.utc) + expires_delta
-    else:
-        expire = datetime.now(timezone.utc) + timedelta(minutes = 15)
-    to_encode.update({"exp": expire})
-    encoded_jwt = jwt.encode(to_encode, SECRET_KEY, algorithm = ALGORITHM)
-    return encoded_jwt
-
-
-async def get_current_user(token: Annotated[str, Depends(oauth2_scheme)]):
-    credentials_exeption = HTTPException(
-        status_code = status.HTTP_401_UNAUTHORIZED,
-        detail = "Could not validate credntials",
-        headers = {"WWW-Authenticate": "Bearer"},
-    )
+def decode_session_cookie(cookie: str):
     try:
-        payload = jwt.decode(token, SECRET_KEY, algorithms = [ALGORITHM])
-        username: str = payload.get("sub")
-        if username is None:
-            raise credentials_exeption
-        token_data = TokenData(username = username)
-    except JWTError:
-        raise credentials_exeption
-    user = get_user(fake_users_db, username = token_data.username)
-    if user is None:
-        raise credentials_exeption
-    return user
+        data = serializer.loads(cookie, max_age = 3600)
+        return data
+    except (BadSignature, SignatureExpired):
+        return None
 
 
-async def get_current_active_user(
-        current_user: Annotated[User, Depends(get_current_user)]
-):
-    if current_user.disabled:
-        log.info(f"User {current_user.username} tried to login while inactive")
-        raise HTTPException(status_code = 400, detail = "Inactive user")
-    return current_user
+def verify_user(username: str, password: str):
+    with Database() as db:
+        cursor = db.get_cursor()
+        cursor.execute('select password from utenti '
+                       'where username = %s',
+                       (username,))
+        password_db = cursor.fetchone()[0]
+        debug(password_db)
+        debug(password)
+        debug(pwd_context.verify(password, password_db))
+        if password_db and pwd_context.verify(password, password_db):
+            cursor.execute('select id_utente, username, id_istituto, ruolo '
+                           'from utenti where username = %s', (username,))
+            return db.fetchone_to_dict(cursor)
+        return None
 
 
-@token_router.post("/token")
-async def login_for_token_access(
-        form_data: Annotated[OAuth2PasswordRequestForm, Depends()]
-) -> Token:
-    """
-    OAuth2 Token Login
+@auth_router.post('/register')
+async def register(user: UserForm):
+    debug(user)
+    try:
+        with Database() as db:
+            cursor = db.get_cursor()
+            log.debug('execute')
+            cursor.execute('select count(*) from utenti '
+                           'where username = %s',
+                           (user.username,))
+            debug('if')
+            if cursor.fetchone()[0]:
+                raise HTTPException(status_code=400, detail="Username already registered")
+            else:
+                id_istituto_map: dict = {'EXT': 0, 'ITT': 1, 'LAC': 2, 'LAV': 3}
+                id_istituto: int = id_istituto_map.get(user.istituto)
+
+                debug('hashing..')
+                hashed_password = pwd_context.hash(user.password)
+
+                debug('execute 2')
+                cursor.execute('insert into utenti('
+                               'nome, cognome, username, password, id_istituto, ruolo)'
+                               'values(%s, %s, %s, %s, %s, %s)',
+                               (user.nome, user.cognome, user.username,
+                                hashed_password, id_istituto, user.ruolo))
+                debug('commit')
+                db.commit()
+                return JSONResponse({'message': 'You have registered successfully'}, 200)
+    except Exception as e:
+        db.rollback()
+        log.error(f'Error registering user: {str(e)}')
+        raise HTTPException(status_code=500, detail="Internal Server Error")
+
+
+@auth_router.post('/login')
+async def login(username: str, password: str):
+    debug('tryng to login..')
+    try:
+        user = verify_user(username, password)
+        debug(user)
+        if not user:
+            debug('raising ex')
+            raise HTTPException(status_code=401, detail="Invalid username or password")
+        debug('assigning session_data')
+        session_data = {
+            'userid': user['id_utente'],
+            'username': username,
+            'istiuto': user['id_istituto'],
+            'ruolo': user['ruolo'],
+        }
+        debug(session_data)
+        session_id = create_session_cookie(session_data)
+        debug('redis1')
+        redis.hset(session_id, mapping = session_data)
+        debug('redis2')
+        redis.expire(session_id, 14400)
+        debug('setting session cookie')
+        debug(session_id)
+
+        response = JSONResponse({'message': 'Successfully logged in!'}, 200)
+        response.set_cookie('session', value = session_id, httponly = True)
+        return response
+        
+    except Exception as e:
+        log.error(f'Error logging in user: {str(e)}')
+        raise HTTPException(status_code=500, detail="Internal Server Error")
+
+
+@auth_router.get('/logout')
+async def logout():
+    response = JSONResponse({'status': 'successful', 'message': 'Successfully logged out!'}, 200)
+    response.delete_cookie('session')
+    return response
+
+
+def get_current_user(request: Request):
+    session_id = request.cookies.get('session')
+    debug(f'session id = {session_id}')
+
+    if not session_id:
+        raise HTTPException(status_code=401, detail="Not authenticated")
     
-    **Path**: `/token`
+    try:
+        session_data = serializer.loads(session_id)
+    except Exception:
+        raise HTTPException(status_code=401, detail="Invalid session")
     
-    **Method**: `POST`
-    
-    **Description**:
-    OAuth2 compatible token login, get an access token for future requests.
-    
-    **Arguments**:
-    - `form_data`: Form data containing the username and password.
-    
-    **Returns**:
-    - `Token`: A token object containing the access token and token type.
-    
-    **Raises**:
-    - `HTTPException`: If authentication fails.
-    """
-    user = authenticate_user(fake_users_db, form_data.username, form_data.password)
-    if not user:
-        log.info(f'User {form_data.username} tried to login but failed')
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Incorrect username or password",
-            headers={"WWW-Authenticate": "Bearer"},
-        )
-    access_token_expires = timedelta(minutes = ACCESS_TOKEN_EXPIRE_MINUTES)
-    access_token = create_access_token(
-        data = {"sub": user.username}, expires_delta = access_token_expires
+    return session_data
+
+
+@auth_router.get('/check')
+async def auth_check(user: Annotated[dict, Depends(get_current_user)]):
+    return JSONResponse(
+        {
+            "message": f"You are currently authenticated as {user['username']}",
+            "username": user['username'],
+            "role": user['ruolo']
+        }
     )
-    return Token(access_token = access_token, token_type = "bearer")
-
-
-@router.get("/me")
-async def read_users_me(
-        current_user: Annotated[User, Depends(get_current_active_user)]
-):
-    """
-    Get Current User Information
-    
-    **Path**: `/users/me`
-    
-    **Method**: `GET`
-    
-    **Description**:
-    Retrieve the current user's information.
-    
-    **Arguments**:
-    - `current_user`: The current active user.
-    
-    **Returns**:
-    - `User`: The current user's information.
-    """
-    return current_user
-
-
-@router.get("/me/items")
-async def read_own_items(
-        current_user: Annotated[User, Depends(get_current_active_user)]
-):
-    """
-    Get Current User's Items
-    
-    **Path**: `/users/me/items`
-    
-    **Method**: `GET`
-    
-    **Description**:
-    Retrieve items owned by the current user.
-    
-    **Arguments**:
-    - `current_user`: The current active user.
-    
-    **Returns**:
-    - `List[Dict]`: A list of items owned by the current user.
-    """
-    return [{"item_id": "Foo", "owner": current_user.username}]
+ 
