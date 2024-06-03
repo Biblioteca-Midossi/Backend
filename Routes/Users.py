@@ -129,11 +129,13 @@ async def login(username: str, password: str):
         }
         debug(session_data)
         session_id = create_session_cookie(session_data)
-        debug('redis1')
-        redis.hset(session_id, mapping = session_data)
-        debug('redis2')
+        if not redis.get(session_id):
+            debug('Setting session in redis')
+            redis.hset(session_id, mapping = session_data)
+        
+        debug('Setting redis session expiration')
         redis.expire(session_id, 14400)
-        debug('setting session cookie')
+        debug('Setting session cookie')
         debug(session_id)
 
         response = JSONResponse({'message': 'Successfully logged in!'}, 200)
@@ -171,7 +173,8 @@ def get_current_user(request: Request):
 async def auth_check(user: Annotated[dict, Depends(get_current_user)]):
     return JSONResponse(
         {
-            "message": f"You are currently authenticated as {user['username']}",
+            "message": f"Currently authenticated as {user['username']}",
+            "userid": user['id_utente'],
             "username": user['username'],
             "role": user['ruolo']
         }
