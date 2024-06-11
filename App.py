@@ -2,6 +2,7 @@ import asyncio
 import logging
 from contextlib import asynccontextmanager
 from fastapi import FastAPI
+from fastapi.responses import JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
 from Routes import register_routes
 from Utils.Logger import setup_logger
@@ -27,8 +28,9 @@ biblioteca = FastAPI(
     lifespan = lifespan, 
     root_path = '/api', 
     swagger_ui_parameters={
-        "syntaxHighlight.theme": "obsidian"
-        }
+        "syntaxHighlight.theme": "obsidian",
+        },
+    redoc_url = None,
     )
 
 origins = [
