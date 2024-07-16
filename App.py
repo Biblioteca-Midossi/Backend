@@ -49,6 +49,6 @@ biblioteca.add_middleware(
 )
 
 
-@biblioteca.get("/")
+@biblioteca.get("")
 async def root():
     return {'message': 'Hello World'}

@@ -3,10 +3,6 @@ from dotenv import get_key
 from fastapi import APIRouter, Depends, HTTPException, Request
 from fastapi.responses import JSONResponse
 
-from itsdangerous import URLSafeTimedSerializer, BadSignature, SignatureExpired
-
-from passlib.context import CryptContext
-
 from pydantic import BaseModel
 
 from redis import Redis
@@ -15,13 +11,14 @@ import logging
 
 from typing import Annotated
 
+from Utils.Auth.AuthHelper import pwd_context, verify_user, create_session_cookie, get_current_user
 from Utils.Database.DbHelper import Database
 
 
 log = logging.getLogger('FileLogger')
 debug = log.debug
 
-auth_router = APIRouter(
+router = APIRouter(
     prefix = '/auth',
     tags = ['auth'],
     responses = {
@@ -31,12 +28,7 @@ auth_router = APIRouter(
     }
 )
 
-pwd_context = CryptContext(schemes=['bcrypt'])
-
-redis = Redis(host = 'localhost', port = 6379, decode_responses = True, password = get_key('.env', 'REDIS_PASSWORD'))
-
-# Serializer for cookie handling
-serializer = URLSafeTimedSerializer(get_key('.env', 'COOKIE_KEY'))
+redis = Redis(host = get_key('.env', 'HOST'), port = 6379, decode_responses = True, password = get_key('.env', 'REDIS_PASSWORD'))
 
 
 class UserForm(BaseModel):
@@ -53,34 +45,7 @@ class LoginForm(BaseModel):
     password: str
 
 
-def create_session_cookie(data: dict, max_age: int = 14400):
-    token = serializer.dumps(data)
-    return token
-
-
-def decode_session_cookie(cookie: str):
-    try:
-        data = serializer.loads(cookie, max_age = 14400)
-        return data
-    except (BadSignature, SignatureExpired):
-        return None
-
-
-def verify_user(username: str, password: str):
-    with Database() as db:
-        cursor = db.get_cursor()
-        cursor.execute('select password from utenti '
-                       'where username = %s',
-                       (username,))
-        password_db = cursor.fetchone()[0]
-        if password_db and pwd_context.verify(password, password_db):
-            cursor.execute('select id_utente, username, id_istituto, ruolo '
-                           'from utenti where username = %s', (username,))
-            return db.fetchone_to_dict(cursor)
-        return None
-
-
-@auth_router.post('/register')
+@router.post('/register')
 async def register(user: UserForm):
     debug('trying to register..')
     debug(user)
@@ -117,14 +82,15 @@ async def register(user: UserForm):
         raise HTTPException(status_code=500, detail="Internal Server Error")
 
 
-@auth_router.post('/login')
-async def login(data: LoginForm):
+@router.post('/login')
+async def login(request: Request, data: LoginForm):
     username = data.username
     password = data.password
     debug('trying to login..')
     try:
         user = verify_user(username, password)
         debug(user)
+
         if not user:
             debug('raising ex')
             raise HTTPException(status_code=401, detail="Invalid username or password")
@@ -136,22 +102,29 @@ async def login(data: LoginForm):
             'ruolo': user['ruolo'],
         }
         debug(session_data)
+
         session_id = create_session_cookie(session_data)
-        if not redis.get(session_id):
+        debug(session_id)
+
+        old_session_id = request.cookies.get('session')
+        if old_session_id and redis.exists(old_session_id):
+            debug('deleting old session')
+            redis.delete(old_session_id)
+
+        if not redis.exists(session_id):
             debug('Setting session in redis')
-            redis.hset(session_id, mapping=session_data)
+            redis.hset(session_id, mapping = session_data)
         
         debug('Setting redis session expiration')
         redis.expire(session_id, 14400)
-        debug('Setting session cookie')
-        debug(session_id)
 
+        debug('Setting session cookie')
         response = JSONResponse({'message': 'Successfully logged in!'}, 200)
         response.set_cookie(
             key='session', 
             value=session_id, 
             httponly=True, 
-            samesite='Lax', 
+            samesite='lax',
             path='/'
         )
         return response
@@ -161,32 +134,21 @@ async def login(data: LoginForm):
         raise HTTPException(status_code=500, detail="Internal Server Error")
 
 
-@auth_router.get('/logout')
-async def logout():
+@router.get('/logout')
+async def logout(request: Request):
+    session_id = request.cookies.get('session')
+    debug(f'Logging out session {session_id}')
+
+    if session_id:
+        redis.delete(session_id)
+        debug(f'Session {session_id} deleted from Redis')
+
     response = JSONResponse({'status': 'successful', 'message': 'Successfully logged out!'}, 200)
     response.delete_cookie('session')
     return response
 
 
-def get_current_user(request: Request):
-    session_id = request.cookies.get('session')
-    debug(f'session id = {session_id}')
-
-    if not session_id:
-        raise HTTPException(status_code=401, detail="Not authenticated")
-    
-    try:
-        session_data = decode_session_cookie(session_id)
-        if not session_data:
-            raise HTTPException(status_code=401, detail="Invalid session")
-    except Exception as e:
-        debug(f'Error decoding session cookie: {e}')
-        raise HTTPException(status_code=401, detail="Invalid session")
-    
-    return session_data
-
-
-@auth_router.get('/check')
+@router.get('/check')
 async def auth_check(user: Annotated[dict, Depends(get_current_user)]):
     debug(user)
     return JSONResponse(

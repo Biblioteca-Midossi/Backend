@@ -1,6 +1,6 @@
 from fastapi import FastAPI
 from fastapi.responses import FileResponse, JSONResponse
-from Routes import Auth, Test, Insert, Books, Assets
+from Routes import Auth, Test, Books, Assets
 
 
 async def register_routes(app: FastAPI):
@@ -17,8 +17,7 @@ async def register_routes(app: FastAPI):
         return JSONResponse({'error': f'{error}'}, status_code = 500)
 
     app.include_router(Assets.router)
-    app.include_router(Auth.auth_router)
+    app.include_router(Auth.router)
     app.include_router(Books.router)
-    app.include_router(Insert.router)
     app.include_router(Test.router)
     
