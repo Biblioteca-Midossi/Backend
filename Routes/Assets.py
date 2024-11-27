@@ -1,4 +1,6 @@
 import os
+from typing import Literal
+
 from fastapi import APIRouter, HTTPException
 from fastapi.responses import FileResponse
 
@@ -17,7 +19,7 @@ router = APIRouter(
 
 
 @router.get("/thumbnails/{book_id}.png", response_class = FileResponse)
-async def get_thumbnail(book_id: int):
+async def get_thumbnail(book_id: int | Literal[".no-thumbnail-found"]):
     """
     Get the thumbnail image for a book by its ISBN.
     
@@ -40,9 +42,17 @@ async def get_thumbnail(book_id: int):
     - HTTPException: If there's an error retrieving the thumbnail.
     """
     try:
+        print(book_id)
         thumbnail_path = f"./assets/thumbnails/{book_id}.png"
         if os.path.exists(thumbnail_path):
-            return FileResponse(thumbnail_path)
+            return FileResponse(
+                thumbnail_path,
+                headers = {
+                    "Cache-Control": "no-cache, no-store, must-revalidate",
+                    "Pragma": "no-cache",
+                    "Expires": "0"
+                }
+            )
         else:
             raise HTTPException(status_code = 404, detail = "Thumbnail not found")
     except Exception as e:

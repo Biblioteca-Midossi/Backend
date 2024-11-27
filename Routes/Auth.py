@@ -1,19 +1,14 @@
-from dotenv import get_key
-
 from fastapi import APIRouter, Depends, HTTPException, Request
 from fastapi.responses import JSONResponse
 
 from pydantic import BaseModel
-
-from redis import Redis
 
 import logging
 
 from typing import Annotated
 
 from Utils.Auth.AuthHelper import pwd_context, verify_user, create_session_cookie, get_current_user
-from Utils.Database.DbHelper import Database
-
+from Utils.Database.DbHelper import PSQLDatabase, RedisDatabase
 
 log = logging.getLogger('FileLogger')
 debug = log.debug
@@ -27,8 +22,6 @@ router = APIRouter(
         }
     }
 )
-
-redis = Redis(host = get_key('.env', 'HOST'), port = 6379, decode_responses = True, password = get_key('.env', 'REDIS_PASSWORD'))
 
 
 class UserForm(BaseModel):
@@ -50,7 +43,7 @@ async def register(user: UserForm):
     debug('trying to register..')
     debug(user)
     try:
-        with Database() as db:
+        with PSQLDatabase() as db:
             cursor = db.get_cursor()
             debug('register select count(*)')
             cursor.execute('select count(*) from utenti '
@@ -59,10 +52,13 @@ async def register(user: UserForm):
                            (user.username, user.email))
             debug('register if')
             if cursor.fetchone()[0]:
-                raise HTTPException(status_code=400, detail="Username already registered or email already used")
+                raise HTTPException(status_code = 400, detail = "Username already registered or email already used")
             else:
-                id_istituto_map: dict = {'EXT': 0, 'ITT': 1, 'LAC': 2, 'LAV': 3}
-                id_istituto: int = id_istituto_map.get(user.istituto)
+                if not user.istituto.isnumeric():
+                    id_istituto_map: dict = {'EXT': 0, 'ITT': 1, 'LAC': 2, 'LAV': 3}
+                    id_istituto: int = id_istituto_map.get(user.istituto)
+                else:
+                    id_istituto: int = user.istituto
 
                 debug('hashing..')
                 hashed_password = pwd_context.hash(user.password)
@@ -75,11 +71,11 @@ async def register(user: UserForm):
                                 hashed_password, id_istituto, 0))
                 debug('register commit')
                 db.commit()
-                return JSONResponse({'message': 'You have registered successfully'}, 200)
+                return JSONResponse({'message': 'You have registered successfully'}, 201)
     except Exception as e:
         db.rollback()
         log.error(f'Error registering user: {str(e)}')
-        raise HTTPException(status_code=500, detail="Internal Server Error")
+        raise HTTPException(status_code = 500, detail = "Internal Server Error")
 
 
 @router.post('/login')
@@ -93,7 +89,7 @@ async def login(request: Request, data: LoginForm):
 
         if not user:
             debug('raising ex')
-            raise HTTPException(status_code=401, detail="Invalid username or password")
+            raise HTTPException(status_code = 401, detail = "Invalid username or password")
         debug('assigning session_data')
         session_data = {
             'userid': user['id_utente'],
@@ -107,31 +103,32 @@ async def login(request: Request, data: LoginForm):
         debug(session_id)
 
         old_session_id = request.cookies.get('session')
-        if old_session_id and redis.exists(old_session_id):
-            debug('deleting old session')
-            redis.delete(old_session_id)
+        with RedisDatabase() as redis:
+            if old_session_id and redis.client.exists(old_session_id):
+                debug('deleting old session')
+                redis.client.delete(old_session_id)
 
-        if not redis.exists(session_id):
-            debug('Setting session in redis')
-            redis.hset(session_id, mapping = session_data)
-        
-        debug('Setting redis session expiration')
-        redis.expire(session_id, 14400)
+            if not redis.client.exists(session_id):
+                debug('Setting session in redis')
+                redis.client.hset(session_id, mapping = session_data)
+
+            debug('Setting redis session expiration')
+            redis.client.expire(session_id, 14400)
 
         debug('Setting session cookie')
         response = JSONResponse({'message': 'Successfully logged in!'}, 200)
         response.set_cookie(
-            key='session', 
-            value=session_id, 
-            httponly=True, 
-            samesite='lax',
-            path='/'
+            key = 'session',
+            value = session_id,
+            httponly = True,
+            samesite = 'lax',
+            path = '/'
         )
         return response
-        
+
     except Exception as e:
         log.error(f'Error logging in user: {str(e)}')
-        raise HTTPException(status_code=500, detail="Internal Server Error")
+        raise HTTPException(detail = "Internal Server Error", status_code = 500)
 
 
 @router.get('/logout')
@@ -140,7 +137,8 @@ async def logout(request: Request):
     debug(f'Logging out session {session_id}')
 
     if session_id:
-        redis.delete(session_id)
+        with RedisDatabase() as redis:
+            redis.client.delete(session_id)
         debug(f'Session {session_id} deleted from Redis')
 
     response = JSONResponse({'status': 'successful', 'message': 'Successfully logged out!'}, 200)
@@ -155,7 +153,7 @@ async def auth_check(user: Annotated[dict, Depends(get_current_user)]):
         {
             "userid": user['userid'],
             "username": user['username'],
+            "istituto": user['istituto'],
             "role": user['ruolo']
         }
     )
- 

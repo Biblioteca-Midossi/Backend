@@ -1,8 +1,8 @@
 import os
 
-from Utils.Database.DbHelper import Database
+from Utils.Database.DbHelper import PSQLDatabase
 
-with Database() as db:
+with PSQLDatabase() as db:
     cursor = db.get_cursor()
     cursor.execute('select isbn, id_libro from libri')
 
@@ -21,6 +21,4 @@ with Database() as db:
         except FileNotFoundError:
             continue
 
-
     # print(dict)
-

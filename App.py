@@ -2,7 +2,6 @@ import asyncio
 import logging
 from contextlib import asynccontextmanager
 from fastapi import FastAPI
-from fastapi.responses import JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
 from Routes import register_routes
 from Utils.Logger import setup_logger
@@ -39,13 +38,16 @@ origins = [
     "https://localhost:8001",
 ]
 
+origins_regex = r"(https?:\/\/)?(192)\.(168)(\.(25[0-5]|2[0-4][0-9]|1[0-9][0-9]|[1-9][0-9]|[0-9])){2}(?::8001)?|localhost(?::8001)?|127.0.0.1(?::8001)?"
+
+# noinspection PyTypeChecker
 biblioteca.add_middleware(
     CORSMiddleware,
     # allow_origins = origins,
     allow_credentials = True,
     allow_methods = ['*'],
     allow_headers = ['*'],
-    allow_origin_regex = r"(https?:\/\/)?(192)\.(168)(\.(25[0-5]|2[0-4][0-9]|1[0-9][0-9]|[1-9][0-9]|[0-9])){2}(?::8001)?|localhost(?::8001)?|127.0.0.1(?::8001)?"
+    allow_origin_regex = origins_regex,
 )
 
 

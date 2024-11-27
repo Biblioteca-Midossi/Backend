@@ -8,7 +8,7 @@ from logging import getLogger
 from itsdangerous import URLSafeTimedSerializer, BadSignature, SignatureExpired
 from passlib.context import CryptContext
 
-from Utils.Database.DbHelper import Database
+from Utils.Database.DbHelper import PSQLDatabase
 
 log = getLogger("FileLogger")
 debug = log.debug
@@ -33,7 +33,7 @@ def decode_session_cookie(cookie: str):
 
 
 def verify_user(username: str, password: str):
-    with Database() as db:
+    with PSQLDatabase() as db:
         cursor = db.get_cursor()
         cursor.execute('select password from utenti '
                        'where username = %s',
@@ -48,13 +48,14 @@ def verify_user(username: str, password: str):
 
 def get_current_user(request: Request):
     session_id = request.cookies.get('session')
-    debug(f'session id = {session_id}')
+    debug(f'session id = {session_id or None}')
 
     if not session_id:
         raise HTTPException(status_code = 401, detail = "Not authenticated")
 
     try:
         session_data = decode_session_cookie(session_id)
+        debug(session_data)
         if not session_data:
             raise HTTPException(status_code = 401, detail = "Invalid session")
     except Exception as e:

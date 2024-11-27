@@ -1,18 +1,21 @@
-from enum import Enum
 import logging
 import psycopg2.pool
-from Utils.Database.DbConfig import database_config
+import redis.exceptions
+from redis import Redis
+
+from Utils.Database.DbConfig import psql_config, redis_config
+
 # from Utils.Database.DatabaseStartupEvent import on_startup
 
 log = logging.getLogger('FileLogger')
 
 # on_startup()
-log.info('Creating connection pool..')
-connection_pool = psycopg2.pool.SimpleConnectionPool(maxconn=4, minconn=1, **database_config)
-log.info('Pool successfully created!')
+log.info('Creating connection pool for postgres..')
+psql_pool = psycopg2.pool.SimpleConnectionPool(maxconn = 4, minconn = 1, **psql_config)
+log.info('Postgres pool successfully created.')
 
 
-class Database:
+class PSQLDatabase:
     def __init__(self):
         self.conn = None
         self.cursor = None
@@ -20,7 +23,7 @@ class Database:
     def open(self):
         # getting a connection from the pool
         try:
-            self.conn = connection_pool.getconn()
+            self.conn = psql_pool.getconn()
         except psycopg2.Error as pool_error:
             log.error(f'Error while getting a connection from the pool: {pool_error}')
             raise
@@ -35,7 +38,7 @@ class Database:
     def close(self):
         try:
             self.cursor.close()
-            connection_pool.putconn(self.conn)
+            psql_pool.putconn(self.conn)
         except psycopg2.Error as close_error:
             log.error(f'Error while closing the cursor or the connection: {close_error}')
 
@@ -50,7 +53,6 @@ class Database:
             self.conn.rollback()
         except psycopg2.Error as rollback_error:
             log.error(f'Error while committing changes to the database: {rollback_error}')
-
 
     def get_cursor(self):
         return self.cursor
@@ -67,8 +69,32 @@ class Database:
         colnames = [desc[0] for desc in cursor.description]
         return [dict(zip(colnames, row)) for row in rows]
 
-    def __enter__(self) -> 'Database':
+    def __enter__(self) -> 'PSQLDatabase':
         self.open()
+        return self
+
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        self.close()
+
+
+log.info('Creating connection pool for postgres..')
+redis_pool = redis.ConnectionPool(**redis_config)
+log.info('Postgres pool successfully created.')
+
+
+class RedisDatabase:
+    def __init__(self):
+        self.client: Redis = Redis(
+            connection_pool = redis_pool,
+        )
+
+    def close(self):
+        try:
+            self.client.close()
+        except redis.exceptions.RedisError as close_error:
+            log.error(f'Error while closing the redis connection: {close_error}')
+
+    def __enter__(self) -> 'RedisDatabase':
         return self
 
     def __exit__(self, exc_type, exc_val, exc_tb):

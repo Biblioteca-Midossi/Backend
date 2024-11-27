@@ -1,10 +1,10 @@
 import os
 from natsort import natsorted
-from Utils.Database.DbHelper import Database
+from Utils.Database.DbHelper import PSQLDatabase
 
 
 def migrate():
-    with Database() as db:
+    with PSQLDatabase() as db:
         cursor = db.get_cursor()
         for file in natsorted(os.listdir("assets/thumbnails")):
             file_id = file[:-4]

@@ -1,7 +1,19 @@
-from fastapi import APIRouter
+import io
+import json
+import logging
+import os
+from typing import Annotated
+
+from PIL import Image
+from fastapi import APIRouter, UploadFile, File
 from fastapi.exceptions import HTTPException
+from fastapi.requests import Request
 from fastapi.responses import JSONResponse
-from Utils.Database.DbHelper import Database
+
+
+from Utils.Database.DbHelper import PSQLDatabase
+
+log = logging.getLogger('FileLogger')
 
 router = APIRouter(
     tags = ['test'],
@@ -32,7 +44,7 @@ async def test_route():
 
 
 @router.get('/get-test')
-def db_get_test():
+async def db_get_test():
     """
     Database Get Test
     
@@ -52,7 +64,7 @@ def db_get_test():
     - `Exception`: If there is an error connecting to the database or executing the query.
     """
     try:
-        with Database() as db:
+        with PSQLDatabase() as db:
             cursor = db.get_cursor()
             cursor.execute("select * from test")
             test_result = [{
@@ -61,3 +73,36 @@ def db_get_test():
         return JSONResponse({'result': test_result}, status_code = 200)
     except Exception as e:
         return HTTPException(status_code = 400, detail = f'Error: {e}')
+
+
+async def covert_to_png(file_content: bytes):
+    try:
+        with Image.open(io.BytesIO(file_content)) as img:
+            img = img.convert('RGB')
+            png_bytes = io.BytesIO()
+            img.save(png_bytes, format = 'PNG')
+            return png_bytes.getvalue()
+    except Exception as e:
+        log.error(f"Error converting image to PNG: {e}")
+        raise HTTPException(status_code = 500, detail = "Error converting image to PNG")
+
+
+@router.post('/post-test')
+async def post_test(request: Request, file: Annotated[UploadFile, File(...)]):
+    form_data = await request.form()
+    data = json.loads(form_data.get('data'))
+    print(data)
+
+    # Convert to PNG
+    png_bytes = await covert_to_png(await file.read())
+
+    # Make sure the directory is there
+    save_directory = './assets/thumbnails/'
+    os.makedirs(save_directory, exist_ok = True)
+
+    # Save the uploaded file
+    file_path = os.path.join(save_directory, f'test.png')
+    with open(file_path, 'wb') as buffer:
+        buffer.write(png_bytes)
+
+    return JSONResponse({'message': 'test successful'}, status_code = 200)
