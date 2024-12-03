@@ -1,24 +1,29 @@
-from fastapi import APIRouter, HTTPException, Path, UploadFile, File, Depends, Query
+from fastapi import (
+    APIRouter,
+    HTTPException,
+    Path,
+    UploadFile,
+    File,
+    Depends,
+    Query
+)
 from fastapi.requests import Request
 from fastapi.responses import JSONResponse
 
-import io
 import json
 
 from logging import getLogger
 
 import os
 
-from PIL import Image
-
 import psycopg2
 
 from typing import Annotated
 
-from pydantic import BaseModel
-
-from Utils.Auth.AuthHelper import verify_role
-from Utils.Database.DbHelper import PSQLDatabase
+from Routes.services.db_operations import insert_book_into_database
+from Routes.services.file_operations import convert_to_png
+from utils.auth.AuthHelper import verify_role
+from utils.database.DbHelper import PSQLDatabase
 
 log = getLogger("FileLogger")
 
@@ -31,244 +36,6 @@ router = APIRouter(
         }
     }
 )
-
-
-class Book(BaseModel):
-    id_collocazione: int | None
-    id_autore: int | None
-    isbn: str
-    titolo: str
-    genere: str
-    quantita: int
-    casa_editrice: str
-    descrizione: str
-    thumbnail_path: str
-    id_libro: int
-    nome_autore: str
-    cognome_autore: str
-
-    def set_id_collocazione(self, id_collocazione: int):
-        self.id_collocazione = id_collocazione
-
-    def set_id_autore(self, id_autore: int):
-        self.id_autore = id_autore
-
-
-class InvalidRequestError(Exception):
-    pass
-
-
-class DatabaseError(Exception):
-    pass
-
-
-def check_isbn_exists(isbn: str) -> bool:
-    with PSQLDatabase() as db:
-        cursor = db.get_cursor()
-        cursor.execute('select count(*) from libri where isbn = %s', (isbn,))
-        return cursor.fetchone()[0] > 0
-
-
-def insert_collocazione(collocazione: dict[str, str]) -> int:
-    scaffale: str = collocazione.get('scaffale').upper()
-    istituto: str = collocazione.get('istituto').upper()
-
-    id_istituto_map: dict = {'ITT': 1, 'LAC': 2, 'LAV': 3}
-    id_istituto: int = id_istituto_map.get(istituto)
-
-    with PSQLDatabase() as db:
-        cursor = db.get_cursor()
-
-        cursor.execute('select id_collocazione from collocazioni '
-                       'where scaffale = %s and id_istituto = %s',
-                       (scaffale, id_istituto))
-
-        id_collocazione = cursor.fetchone()
-        if id_collocazione:
-            return id_collocazione[0]
-        else:
-            cursor.execute('insert into collocazioni'
-                           '(id_istituto, scaffale) values (%s, %s) '
-                           'returning id_collocazione',
-                           (id_istituto, scaffale))
-            db.commit()
-            return cursor.fetchone()[0]
-
-
-def insert_autore(autore: dict[str, str]) -> int:
-    nome: str = autore.get('nome')
-    cognome: str = autore.get('cognome')
-
-    with PSQLDatabase() as db:
-        cursor = db.get_cursor()
-
-        cursor.execute('select id_autore from autori '
-                       'where nome = %s and cognome = %s',
-                       (nome, cognome))
-        author = cursor.fetchone()
-        if author:
-            return author[0]
-        else:
-            cursor.execute('insert into autori '
-                           '(nome, cognome) values (%s, %s) '
-                           'returning id_autore',
-                           (nome, cognome))
-            db.commit()
-            return cursor.fetchone()[0]  # id_autore
-
-
-def insert_libro(libro: dict, id_collocazione: int):
-    isbn: str = libro.get('isbn')
-    titolo: str = libro.get('titolo')
-    genere: str = libro.get('genere')
-    quantita: str = libro.get('quantita')
-    casa_editrice: str = libro.get('casaEditrice')
-    descrizione: str = libro.get('descrizione')
-
-    with PSQLDatabase() as db:
-        cursor = db.get_cursor()
-
-        cursor.execute('insert into libri'
-                       '(id_collocazione, isbn, titolo, genere, '
-                       'quantita, casa_editrice, descrizione) '
-                       'values (%s, %s, %s, %s, %s, %s, %s) '
-                       'returning id_libro',
-                       (id_collocazione, isbn, titolo, genere,
-                        quantita, casa_editrice, descrizione))
-        db.commit()
-        return cursor.fetchone()[0]
-
-
-async def convert_to_png(file_content: bytes):
-    try:
-        with Image.open(io.BytesIO(file_content)) as img:
-            img = img.convert('RGB')
-            png_bytes = io.BytesIO()
-            img.save(png_bytes, format = 'PNG')
-            return png_bytes.getvalue()
-    except Exception as e:
-        log.error(f"Error converting image to PNG: {e}")
-        raise HTTPException(status_code = 500, detail = "Error converting image to PNG")
-
-
-async def upload_thumbnail(file, book_id):
-    """
-    Upload and save a thumbnail for a book.
-
-    **Path**: `/insert/thumbnail/{isbn}`
-
-    **Method**: `POST`
-
-    **Description**:
-    Uploads a thumbnail image for a book identified by its ISBN. The image is converted to PNG format before being saved.
-
-    **Arguments**:
-    - `isbn` (str): The ISBN of the book.
-    - `file` (UploadFile): The uploaded image file.
-
-    **Returns**:
-    - JSONResponse: Status message indicating success.
-
-    **Raises**:
-    - HTTPException: If an error occurs while uploading the thumbnail.
-    """
-    try:
-        # Convert to PNG
-        png_bytes = await convert_to_png(await file.read())
-
-        # Make sure the directory is there
-        save_directory = './assets/thumbnails/'
-        os.makedirs(save_directory, exist_ok = True)
-
-        # Save the uploaded file
-        file_path = os.path.join(save_directory, f'{book_id}.png')
-        with open(file_path, 'wb') as buffer:
-            buffer.write(png_bytes)
-
-        with PSQLDatabase() as db:
-            cursor = db.get_cursor()
-            cursor.execute('update libri '
-                           'set thumbnail_path = %s where id_libro = %s',
-                           (file_path[2:], book_id))
-            db.commit()
-
-        return JSONResponse({'status': 'successful'}, status_code = 200)
-
-    except Exception as e:
-        log.error(f"Error uploading thumbnail: {e}")
-        raise HTTPException(status_code = 500, detail = "Error uploading thumbnail")
-
-
-def insert_libro_autori(id_libro: int, id_autore: int):
-    with PSQLDatabase() as db:
-        cursor = db.get_cursor()
-        cursor.execute('insert into libro_autori (id_libro, id_autore) values (%s, %s)',
-                       (id_libro, id_autore))
-        db.commit()
-
-
-async def insert_book_into_database(data, file: UploadFile):
-    collocazione = {
-        'istituto': data['istituto'],
-        'scaffale': data['scaffale'],
-    }
-
-    libro = {
-        'isbn': data['isbn'],
-        'titolo': data['titolo'],
-        'genere': data['genere'],
-        'quantita': data['quantita'],
-        'casaEditrice': data['casaEditrice'],
-        'descrizione': data['descrizione'],
-    }
-
-    print(data)
-
-    author_names = [name.strip() for names in data['nomeAutore'] for name in names.split(',')]
-    author_surnames = [surname.strip() for surnames in data['cognomeAutore'] for surname in surnames.split(',')]
-
-    if len(author_names) != len(author_surnames):
-        raise HTTPException(status_code = 400, detail = "Mismatch between number of names and surnames")
-
-    authors = [{'nome': nome, 'cognome': cognome} for nome, cognome in zip(author_names, author_surnames)]
-
-    print("authors", authors)
-
-    try:
-        print('checking isbn')
-        if check_isbn_exists(libro.get('isbn')):
-            with PSQLDatabase() as db:
-                cursor = db.get_cursor()
-                cursor.execute("update libri set quantita = libri.quantita + 1 "
-                               "where isbn = %s", (libro.get('isbn'),))
-                db.commit()
-            return JSONResponse(
-                {"message": "The Book is already in the database and the inventory has been updated"},
-                201
-            )
-
-        print('isbn checked')
-
-        id_collocazione = insert_collocazione(collocazione)
-        id_libro = insert_libro(libro, id_collocazione)
-
-        for author in authors:
-            id_autore = insert_autore(author)
-            insert_libro_autori(id_libro, id_autore)
-        print('uploading thumbnail')
-        await upload_thumbnail(file, id_libro)
-        log.info(f"Book '{libro['titolo']}' inserted successfully into the database.")
-        return JSONResponse({"status": "successful"}, 201)
-
-    except InvalidRequestError as e:
-        log.error(f"Invalid request: {e}.")
-        raise HTTPException(status_code = 400, detail = str(e))
-    except psycopg2.Error as e:
-        log.error(f"Database error: {e}.")
-        raise HTTPException(status_code = 500, detail = "Database error")
-    except Exception as e:
-        log.error(f"Unexpected error: {e}")
-        raise HTTPException(status_code = 500, detail = "Unexpected error")
 
 
 @router.get('')
@@ -631,8 +398,8 @@ async def update_book(updated_book: Request, file: Annotated[UploadFile, File(..
             log.info(f'Book with ID {book_id} updated successfully')
             return JSONResponse({'message': 'Book updated successfully'}, 200)
     except psycopg2.Error as e:
-        log.error(f"Database error druing book update: {e}")
-        raise HTTPException(status_code = 400, detail = f"Database error during book update: {e}")
+        log.error(f"database error druing book update: {e}")
+        raise HTTPException(status_code = 400, detail = f"database error during book update: {e}")
     except Exception as e:
         log.error(f"Unexpected error during book update: {e}")
         raise HTTPException(status_code = 500, detail = f"Unexpected error during book update: {e}")
@@ -689,8 +456,8 @@ async def delete_book(book_id: int = Path(...)):
             log.info(f'Book with ID {book_id} deleted successfully')
             return JSONResponse({'message': 'Libro eliminato con successo'}, status_code = 200)
     except psycopg2.Error as e:
-        log.error(f"Database error during book deletion: {e}")
-        raise HTTPException(status_code = 500, detail = f"Database error during book deletion: {e}")
+        log.error(f"database error during book deletion: {e}")
+        raise HTTPException(status_code = 500, detail = f"database error during book deletion: {e}")
     except Exception as e:
         log.error(f"Unexpected error during book deletion: {e}")
         raise HTTPException(status_code = 500, detail = f"Unexpected error during book deletion: {e}")

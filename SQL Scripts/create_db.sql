@@ -26,7 +26,7 @@ create table if not exists libri
 (
     id_collocazione integer
         references collocazioni,
-    isbn            varchar(64)                                                         not null,
+    isbn            varchar(64) not null,
     titolo          varchar(128),
     genere          varchar(256),
     quantita        integer,
@@ -42,6 +42,7 @@ create table if not exists test
     test varchar(10)
 );
 
+-- Use this if creating
 create table if not exists utenti
 (
     id_utente   bigint default nextval('sql1259724_5.utenti_id_utente_seq'::regclass) not null
@@ -57,6 +58,13 @@ create table if not exists utenti
 );
 
 comment on column utenti.ruolo is 'Utente, Moderatore, Admin, ecc..';
+
+-- Use this if altering
+alter table utenti
+    add column if not exists ruolo integer not null default 0,
+    add column if not exists password varchar(256),
+    add column if not exists username varchar(64),
+    add column if not exists email varchar(384);
 
 create table if not exists prenotazioni
 (
@@ -82,6 +90,21 @@ create table if not exists libro_autori
             on delete cascade,
     constraint autori_libro_pkey
         primary key (id_libro, id_autore)
+);
+
+-- New table for genres
+create table if not exists generi (
+    id_genere serial primary key,
+    nome_genere varchar(256) unique not null
+);
+
+-- Junction table to support many-to-many relationship between books and genres
+create table if not exists libro_generi (
+    id_libro integer not null
+        references libri on delete cascade,
+    id_genere integer not null
+        references generi on delete cascade,
+    primary key (id_libro, id_genere)
 );
 
 

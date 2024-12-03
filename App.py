@@ -4,7 +4,7 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from Routes import register_routes
-from Utils.Logger import setup_logger
+from utils.Logger import setup_logger
 
 
 setup_logger()

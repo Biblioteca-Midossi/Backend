@@ -1,8 +1,11 @@
 import os
+from logging import getLogger
 from typing import Literal
 
 from fastapi import APIRouter, HTTPException
 from fastapi.responses import FileResponse
+
+log = getLogger("FileLogger")
 
 router = APIRouter(
     prefix = '/assets',
@@ -44,6 +47,8 @@ async def get_thumbnail(book_id: int | Literal[".no-thumbnail-found"]):
     try:
         print(book_id)
         thumbnail_path = f"./assets/thumbnails/{book_id}.png"
+        print(thumbnail_path)
+        print(os.path.exists(thumbnail_path))
         if os.path.exists(thumbnail_path):
             return FileResponse(
                 thumbnail_path,
@@ -56,4 +61,5 @@ async def get_thumbnail(book_id: int | Literal[".no-thumbnail-found"]):
         else:
             raise HTTPException(status_code = 404, detail = "Thumbnail not found")
     except Exception as e:
+        log.error(e)
         raise HTTPException(status_code = 500, detail = str(e))

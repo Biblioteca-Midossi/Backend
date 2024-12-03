@@ -1,14 +1,14 @@
 from fastapi import APIRouter, Depends, HTTPException, Request
 from fastapi.responses import JSONResponse
 
-from pydantic import BaseModel
-
 import logging
 
 from typing import Annotated
 
-from Utils.Auth.AuthHelper import pwd_context, verify_user, create_session_cookie, get_current_user
-from Utils.Database.DbHelper import PSQLDatabase, RedisDatabase
+from Routes.models.auth_models import UserForm, LoginForm
+from Routes.services.session_service import create_user_session, delete_user_session
+from Routes.services.user_service import check_user_exists, create_user
+from utils.auth.AuthHelper import verify_user, get_current_user, hash_password
 
 log = logging.getLogger('FileLogger')
 debug = log.debug
@@ -24,98 +24,45 @@ router = APIRouter(
 )
 
 
-class UserForm(BaseModel):
-    nome: str
-    cognome: str
-    username: str
-    email: str
-    password: str
-    istituto: str | int
-
-
-class LoginForm(BaseModel):
-    username: str
-    password: str
-
-
 @router.post('/register')
 async def register(user: UserForm):
-    debug('trying to register..')
-    debug(user)
     try:
-        with PSQLDatabase() as db:
-            cursor = db.get_cursor()
-            debug('register select count(*)')
-            cursor.execute('select count(*) from utenti '
-                           'where username = %s '
-                           'or email = %s',
-                           (user.username, user.email))
-            debug('register if')
-            if cursor.fetchone()[0]:
-                raise HTTPException(status_code = 400, detail = "Username already registered or email already used")
-            else:
-                if not user.istituto.isnumeric():
-                    id_istituto_map: dict = {'EXT': 0, 'ITT': 1, 'LAC': 2, 'LAV': 3}
-                    id_istituto: int = id_istituto_map.get(user.istituto)
-                else:
-                    id_istituto: int = user.istituto
+        if check_user_exists(user.username, user.email):
+            raise HTTPException(status_code = 400, detail = "Username already registered or email already used")
 
-                debug('hashing..')
-                hashed_password = pwd_context.hash(user.password)
+        hashed_password = hash_password(user.password)
+        create_user(user, hashed_password)
 
-                debug('register insert..')
-                cursor.execute('insert into utenti('
-                               'nome, cognome, username, email, password, id_istituto, ruolo)'
-                               'values(%s, %s, %s, %s, %s, %s, %s)',
-                               (user.nome, user.cognome, user.username, user.email,
-                                hashed_password, id_istituto, 0))
-                debug('register commit')
-                db.commit()
-                return JSONResponse({'message': 'You have registered successfully'}, 201)
+        return JSONResponse({'message': 'You have registered successfully'}, 201)
+
     except Exception as e:
-        db.rollback()
         log.error(f'Error registering user: {str(e)}')
         raise HTTPException(status_code = 500, detail = "Internal Server Error")
 
 
 @router.post('/login')
 async def login(request: Request, data: LoginForm):
-    username = data.username
-    password = data.password
-    debug('trying to login..')
     try:
-        user = verify_user(username, password)
-        debug(user)
+        user = verify_user(data.username, data.password)
 
         if not user:
-            debug('raising ex')
             raise HTTPException(status_code = 401, detail = "Invalid username or password")
-        debug('assigning session_data')
+
         session_data = {
             'userid': user['id_utente'],
-            'username': username,
+            'username': data.username,
             'istituto': user['id_istituto'],
             'ruolo': user['ruolo'],
         }
-        debug(session_data)
 
-        session_id = create_session_cookie(session_data)
-        debug(session_id)
-
+        # Remove old session if exists
         old_session_id = request.cookies.get('session')
-        with RedisDatabase() as redis:
-            if old_session_id and redis.client.exists(old_session_id):
-                debug('deleting old session')
-                redis.client.delete(old_session_id)
+        if old_session_id:
+            delete_user_session(old_session_id)
 
-            if not redis.client.exists(session_id):
-                debug('Setting session in redis')
-                redis.client.hset(session_id, mapping = session_data)
+        # Create new session
+        session_id = create_user_session(session_data)
 
-            debug('Setting redis session expiration')
-            redis.client.expire(session_id, 14400)
-
-        debug('Setting session cookie')
         response = JSONResponse({'message': 'Successfully logged in!'}, 200)
         response.set_cookie(
             key = 'session',
@@ -134,21 +81,20 @@ async def login(request: Request, data: LoginForm):
 @router.get('/logout')
 async def logout(request: Request):
     session_id = request.cookies.get('session')
-    debug(f'Logging out session {session_id}')
 
     if session_id:
-        with RedisDatabase() as redis:
-            redis.client.delete(session_id)
-        debug(f'Session {session_id} deleted from Redis')
+        delete_user_session(session_id)
 
-    response = JSONResponse({'status': 'successful', 'message': 'Successfully logged out!'}, 200)
+    response = JSONResponse({
+        'status': 'successful',
+        'message': 'Successfully logged out!'
+    }, 200)
     response.delete_cookie('session')
     return response
 
 
 @router.get('/check')
 async def auth_check(user: Annotated[dict, Depends(get_current_user)]):
-    debug(user)
     return JSONResponse(
         {
             "userid": user['userid'],

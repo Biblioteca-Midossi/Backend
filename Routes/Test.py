@@ -11,7 +11,7 @@ from fastapi.requests import Request
 from fastapi.responses import JSONResponse
 
 
-from Utils.Database.DbHelper import PSQLDatabase
+from utils.database.DbHelper import PSQLDatabase
 
 log = logging.getLogger('FileLogger')
 
@@ -46,7 +46,7 @@ async def test_route():
 @router.get('/get-test')
 async def db_get_test():
     """
-    Database Get Test
+    database Get Test
     
     **Path**: `/get-test`
     

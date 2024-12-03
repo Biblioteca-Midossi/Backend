@@ -1,6 +1,6 @@
 import os
 
-from Utils.Database.DbHelper import PSQLDatabase
+from utils.database.DbHelper import PSQLDatabase
 
 with PSQLDatabase() as db:
     cursor = db.get_cursor()

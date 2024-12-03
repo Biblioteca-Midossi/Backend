@@ -1,22 +1,29 @@
+from logging import getLogger
 from typing import Annotated
 
+import bcrypt
 from dotenv import get_key
 from fastapi import HTTPException, Depends
 from fastapi.requests import Request
-from logging import getLogger
-
 from itsdangerous import URLSafeTimedSerializer, BadSignature, SignatureExpired
-from passlib.context import CryptContext
 
-from Utils.Database.DbHelper import PSQLDatabase
+from utils.database.DbHelper import PSQLDatabase
 
 log = getLogger("FileLogger")
 debug = log.debug
 
-pwd_context = CryptContext(schemes=['bcrypt'])
-
 # Serializer for cookie handling
 serializer = URLSafeTimedSerializer(get_key('.env', 'COOKIE_KEY'))
+
+
+def hash_password(password):
+    return bcrypt.hashpw(password = password.encode('utf-8'), salt = bcrypt.gensalt())
+
+
+def verify_password(plain_password, hashed_password):
+    return bcrypt.checkpw(
+        password = plain_password.encode('utf-8'),
+        hashed_password = hashed_password.encode('utf-8') if isinstance(hashed_password, str) else hashed_password)
 
 
 def create_session_cookie(data: dict):
@@ -39,7 +46,7 @@ def verify_user(username: str, password: str):
                        'where username = %s',
                        (username,))
         password_db = cursor.fetchone()[0]
-        if password_db and pwd_context.verify(password, password_db):
+        if password_db and verify_password(password, password_db):
             cursor.execute('select id_utente, username, id_istituto, ruolo '
                            'from utenti where username = %s', (username,))
             return db.fetchone_to_dict(cursor)

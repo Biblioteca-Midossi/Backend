@@ -1,6 +1,6 @@
 import os
 from natsort import natsorted
-from Utils.Database.DbHelper import PSQLDatabase
+from utils.database.DbHelper import PSQLDatabase
 
 
 def migrate():

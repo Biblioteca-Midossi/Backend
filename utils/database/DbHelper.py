@@ -3,7 +3,7 @@ import psycopg2.pool
 import redis.exceptions
 from redis import Redis
 
-from Utils.Database.DbConfig import psql_config, redis_config
+from utils.database.DbConfig import psql_config, redis_config
 
 # from Utils.Database.DatabaseStartupEvent import on_startup
 

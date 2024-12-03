@@ -1,6 +1,6 @@
 from fastapi import FastAPI
 from fastapi.responses import FileResponse, JSONResponse
-from Routes import Auth, Test, Books, Assets
+from Routes import Assets, Auth, Books, Test
 
 
 async def register_routes(app: FastAPI):
