@@ -45,10 +45,10 @@ async def get_thumbnail(book_id: int | Literal[".no-thumbnail-found"]):
     - HTTPException: If there's an error retrieving the thumbnail.
     """
     try:
-        print(book_id)
+        # print(book_id)
         thumbnail_path = f"./assets/thumbnails/{book_id}.png"
-        print(thumbnail_path)
-        print(os.path.exists(thumbnail_path))
+        # print(thumbnail_path)
+        # print(os.path.exists(thumbnail_path))
         if os.path.exists(thumbnail_path):
             return FileResponse(
                 thumbnail_path,

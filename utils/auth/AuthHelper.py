@@ -16,14 +16,16 @@ debug = log.debug
 serializer = URLSafeTimedSerializer(get_key('.env', 'COOKIE_KEY'))
 
 
-def hash_password(password):
+def hash_password(password: str):
     return bcrypt.hashpw(password = password.encode('utf-8'), salt = bcrypt.gensalt())
 
 
-def verify_password(plain_password, hashed_password):
+def verify_password(plain_password: str, hashed_password: str):
+    # debug(f"{plain_password.encode('utf-8')}, {hashed_password}" )
     return bcrypt.checkpw(
         password = plain_password.encode('utf-8'),
-        hashed_password = hashed_password.encode('utf-8') if isinstance(hashed_password, str) else hashed_password)
+        hashed_password = hashed_password.encode('utf-8')
+    )
 
 
 def create_session_cookie(data: dict):
@@ -42,15 +44,24 @@ def decode_session_cookie(cookie: str):
 def verify_user(username: str, password: str):
     with PSQLDatabase() as db:
         cursor = db.get_cursor()
-        cursor.execute('select password from utenti '
-                       'where username = %s',
-                       (username,))
-        password_db = cursor.fetchone()[0]
-        if password_db and verify_password(password, password_db):
-            cursor.execute('select id_utente, username, id_istituto, ruolo '
-                           'from utenti where username = %s', (username,))
-            return db.fetchone_to_dict(cursor)
-        return None
+
+        # First, check if user exists
+        cursor.execute('SELECT password FROM utenti WHERE username = %s', (username,))
+        stored_password = cursor.fetchone()[0]
+
+        if not stored_password:
+            log.error(f"User {username} not found")
+            return None
+
+        try:
+            if verify_password(password, stored_password):
+                cursor.execute('SELECT id_utente, username, id_istituto, ruolo FROM utenti WHERE username = %s', (
+                username,))
+                return db.fetchone_to_dict(cursor)
+        except Exception as e:
+            log.error(f"Password verification error: {e}")
+
+    return None
 
 
 def get_current_user(request: Request):

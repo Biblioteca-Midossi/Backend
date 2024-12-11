@@ -116,7 +116,7 @@ def insert_libro_autori(id_libro: int, id_autore: int):
         db.commit()
 
 
-async def insert_book_into_database(data, file: UploadFile):
+async def insert_book_into_database(data, thumbnail: UploadFile):
     collocazione = {
         'istituto': data['istituto'],
         'scaffale': data['scaffale'],
@@ -165,7 +165,8 @@ async def insert_book_into_database(data, file: UploadFile):
             id_autore = insert_autore(author)
             insert_libro_autori(id_libro, id_autore)
         print('uploading thumbnail')
-        await upload_thumbnail(file, id_libro)
+        if thumbnail:
+            await upload_thumbnail(thumbnail, id_libro)
         log.info(f"Book '{libro['titolo']}' inserted successfully into the database.")
         return JSONResponse({"status": "successful"}, 201)
 
@@ -173,7 +174,7 @@ async def insert_book_into_database(data, file: UploadFile):
         log.error(f"Invalid request: {e}.")
         raise HTTPException(status_code = 400, detail = str(e))
     except psycopg2.Error as e:
-        log.error(f"database error: {e}.")
+        log.error(f"Database error: {e}.")
         raise HTTPException(status_code = 500, detail = "database error")
     except Exception as e:
         log.error(f"Unexpected error: {e}")

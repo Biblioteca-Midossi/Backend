@@ -49,3 +49,31 @@ async def upload_thumbnail(file, book_id):
     except Exception as e:
         log.error(f"Error uploading thumbnail: {e}")
         raise HTTPException(status_code = 500, detail = "Error uploading thumbnail")
+
+
+async def upload_profile_picture(file, user_id):
+    try:
+        # Convert to PNG
+        png_bytes = await convert_to_png(await file.read())
+
+        # Make sure the directory is there
+        save_directory = './assets/profile_pictures/'
+        os.makedirs(save_directory, exist_ok = True)
+
+        # Save the uploaded file
+        file_path = os.path.join(save_directory, f'{user_id}.png')
+        with open(file_path, 'wb') as buffer:
+            buffer.write(png_bytes)
+
+        with PSQLDatabase() as db:
+            cursor = db.get_cursor()
+            cursor.execute('update utenti '
+                           'set profile_picture = %s where id_utente = %s',
+                           (file_path[2:], user_id))
+            db.commit()
+
+        return JSONResponse({'status': 'successful'}, status_code = 200)
+
+    except Exception as e:
+        log.error(f"Error uploading profile picture: {e}")
+        raise HTTPException(status_code = 500, detail = "Error uploading profile picture")

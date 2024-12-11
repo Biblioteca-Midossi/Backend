@@ -209,7 +209,7 @@ async def get_book(book_id: int = Path(...)):
 
 
 @router.post('', dependencies = [Depends(verify_role([3, 4]))])
-async def create_book(data: Request, thumbnail: Annotated[UploadFile, File(...)]):
+async def create_book(data: Request, thumbnail: UploadFile = File(None)):
     """
     Insert a new book into the database via a JSON request.
 

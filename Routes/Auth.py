@@ -27,10 +27,12 @@ router = APIRouter(
 @router.post('/register')
 async def register(user: UserForm):
     try:
+        log.info('checking user..')
         if check_user_exists(user.username, user.email):
             raise HTTPException(status_code = 400, detail = "Username already registered or email already used")
 
-        hashed_password = hash_password(user.password)
+        hashed_password = hash_password(user.password).decode('utf8')
+        print(hashed_password)
         create_user(user, hashed_password)
 
         return JSONResponse({'message': 'You have registered successfully'}, 201)
@@ -40,6 +42,8 @@ async def register(user: UserForm):
         raise HTTPException(status_code = 500, detail = "Internal Server Error")
 
 
+# THIS ONLY SETS COOKIE WITH SESSION DATA
+# TO GET USER DATA, USE /auth/check
 @router.post('/login')
 async def login(request: Request, data: LoginForm):
     try:
@@ -49,7 +53,7 @@ async def login(request: Request, data: LoginForm):
             raise HTTPException(status_code = 401, detail = "Invalid username or password")
 
         session_data = {
-            'userid': user['id_utente'],
+            'id_utente': user['id_utente'],
             'username': data.username,
             'istituto': user['id_istituto'],
             'ruolo': user['ruolo'],
@@ -97,9 +101,6 @@ async def logout(request: Request):
 async def auth_check(user: Annotated[dict, Depends(get_current_user)]):
     return JSONResponse(
         {
-            "userid": user['userid'],
-            "username": user['username'],
-            "istituto": user['istituto'],
-            "role": user['ruolo']
+            **user
         }
     )
