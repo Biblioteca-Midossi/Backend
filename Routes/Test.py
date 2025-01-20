@@ -5,13 +5,14 @@ import os
 from typing import Annotated
 
 from PIL import Image
-from fastapi import APIRouter, UploadFile, File
+from fastapi import APIRouter, UploadFile, File, Depends
 from fastapi.exceptions import HTTPException
 from fastapi.requests import Request
 from fastapi.responses import JSONResponse
 
-
-from utils.database.DbHelper import PSQLDatabase
+from Routes.models.auth_models import TokenResponse
+from utils.auth.oauth2 import get_current_user, verify_role
+from utils.database.db_helper import PSQLDatabase
 
 log = logging.getLogger('FileLogger')
 
@@ -91,7 +92,6 @@ async def covert_to_png(file_content: bytes):
 async def post_test(request: Request, file: Annotated[UploadFile, File(...)]):
     form_data = await request.form()
     data = json.loads(form_data.get('data'))
-    print(data)
 
     # Convert to PNG
     png_bytes = await covert_to_png(await file.read())
@@ -106,3 +106,11 @@ async def post_test(request: Request, file: Annotated[UploadFile, File(...)]):
         buffer.write(png_bytes)
 
     return JSONResponse({'message': 'test successful'}, status_code = 200)
+
+
+@router.get('/role-test', response_class = TokenResponse, dependencies = [Depends(verify_role(3))])
+async def role_test(user: Annotated[dict, Depends(get_current_user)]):
+    return JSONResponse(
+        {'message': f'User {user['username']} has role {user['ruolo']}'},
+        status_code = 200
+    )

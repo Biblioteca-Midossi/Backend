@@ -1,6 +1,6 @@
 import os
 
-from utils.database.DbHelper import PSQLDatabase
+from utils.database.db_helper import PSQLDatabase
 
 with PSQLDatabase() as db:
     cursor = db.get_cursor()
@@ -20,5 +20,3 @@ with PSQLDatabase() as db:
             os.rename(old_path, new_path)
         except FileNotFoundError:
             continue
-
-    # print(dict)

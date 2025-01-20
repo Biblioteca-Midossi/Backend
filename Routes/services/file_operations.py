@@ -6,7 +6,7 @@ from PIL import Image
 from fastapi import HTTPException
 from fastapi.responses import JSONResponse
 
-from utils.database.DbHelper import PSQLDatabase
+from utils.database.db_helper import PSQLDatabase
 
 log = getLogger("FileLogger")
 

@@ -22,8 +22,8 @@ from typing import Annotated
 
 from Routes.services.db_operations import insert_book_into_database
 from Routes.services.file_operations import convert_to_png
-from utils.auth.AuthHelper import verify_role
-from utils.database.DbHelper import PSQLDatabase
+from utils.auth.oauth2 import verify_role
+from utils.database.db_helper import PSQLDatabase
 
 log = getLogger("FileLogger")
 
@@ -100,7 +100,7 @@ async def get_books(
                 (limit, offset, limit)
             )
 
-        raw_books: list = db.fetchall_to_dict(cursor)
+        raw_books: list = db.fetchall_to_dict()
 
         books = []
         for book in raw_books:
@@ -114,7 +114,7 @@ async def get_books(
                 """,
                 (book['id_libro'],)
             )
-            authors = [f"{author['nome']} {author['cognome']}" for author in db.fetchall_to_dict(cursor)]
+            authors = [f"{author['nome']} {author['cognome']}" for author in db.fetchall_to_dict()]
             books.append({
                 "titolo": book['titolo'],
                 "autori": authors,
@@ -172,7 +172,7 @@ async def get_book(book_id: int = Path(...)):
             """,
             (book_id,)
         )
-        book = db.fetchone_to_dict(cursor)
+        book = db.fetchone_to_dict()
 
         if not book:
             raise HTTPException(404, 'Book not found')
@@ -187,7 +187,7 @@ async def get_book(book_id: int = Path(...)):
             """,
             (book_id,)
         )
-        authors = [f"{author['nome']} {author['cognome']}" for author in db.fetchall_to_dict(cursor)]
+        authors = [f"{author['nome']} {author['cognome']}" for author in db.fetchall_to_dict()]
 
         # Construct response
         book_details = {
@@ -208,7 +208,7 @@ async def get_book(book_id: int = Path(...)):
         return JSONResponse({'book': book_details}, 200)
 
 
-@router.post('', dependencies = [Depends(verify_role([3, 4]))])
+@router.post('', dependencies = [Depends(verify_role(3))])
 async def create_book(data: Request, thumbnail: UploadFile = File(None)):
     """
     Insert a new book into the database via a JSON request.
@@ -250,7 +250,7 @@ async def create_book(data: Request, thumbnail: UploadFile = File(None)):
         raise HTTPException(status_code = 500, detail = "Unexpected error")
 
 
-@router.put("/{book_id}", dependencies = [Depends(verify_role([3, 4]))])
+@router.put("/{book_id}", dependencies = [Depends(verify_role(3))])
 async def update_book(updated_book: Request, file: Annotated[UploadFile, File(...)] = None, book_id: int = Path(...)):
     """
     Update a book in the database.
@@ -288,7 +288,7 @@ async def update_book(updated_book: Request, file: Annotated[UploadFile, File(..
 
             # Check if book exists
             cursor.execute('select * from libri where id_libro = %s', (book_id,))
-            book = db.fetchone_to_dict(cursor)
+            book = db.fetchone_to_dict()
 
             if not book:
                 raise HTTPException(404, 'Book not found')
@@ -405,7 +405,7 @@ async def update_book(updated_book: Request, file: Annotated[UploadFile, File(..
         raise HTTPException(status_code = 500, detail = f"Unexpected error during book update: {e}")
 
 
-@router.delete("/{book_id}", dependencies = [Depends(verify_role([3, 4]))])
+@router.delete("/{book_id}", dependencies = [Depends(verify_role(3))])
 async def delete_book(book_id: int = Path(...)):
     """
     Delete a book from the database.
@@ -433,7 +433,7 @@ async def delete_book(book_id: int = Path(...)):
 
             # check if book exists
             cursor.execute('select * from libri where id_libro = %s', (book_id,))
-            book = db.fetchone_to_dict(cursor)
+            book = db.fetchone_to_dict()
 
             if not book:
                 raise HTTPException(404, 'Book not found')

@@ -1,4 +1,6 @@
+import typing
 from datetime import datetime
+from fastapi import Response
 from typing import Optional
 from pydantic import BaseModel, EmailStr
 
@@ -36,3 +38,14 @@ class UserForm(BaseModel):
 class LoginForm(BaseModel):
     username: str
     password: str
+
+
+class TokenRequest(BaseModel):
+    username: str
+    password: str
+
+
+class TokenResponse(Response):
+    def init_headers(self, headers: typing.Mapping[str, str] | None = None) -> None:
+        super().init_headers()
+        self.scope = {'response': self}

@@ -1,14 +1,15 @@
+import json
 import logging
 from typing import Annotated, Optional
 
-from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, Form
+from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, Form, Query, Request
 from starlette.responses import JSONResponse
 
 from Routes.models.auth_models import UserProfileUpdate
 from Routes.services.file_operations import upload_profile_picture
 from Routes.services.user_service import get_user_profile, update_user_profile
-from utils.auth.AuthHelper import get_current_user
-from utils.database.DbHelper import PSQLDatabase
+from utils.auth.oauth2 import get_current_user, verify_role
+from utils.database.db_helper import PSQLDatabase, RedisDatabase
 
 log = logging.getLogger('FileLogger')
 debug = log.debug
@@ -23,12 +24,10 @@ router = APIRouter(
     }
 )
 
-
 @router.get('/me')
 async def get_profile(user: Annotated[dict, Depends(get_current_user)]):
     profile = await get_user_profile(user['id_utente'])
     del profile['password']
-    # print(profile)
     return JSONResponse(profile, 200)
 
 
@@ -69,3 +68,129 @@ async def update_profile(
         return JSONResponse({'message': 'Profile updated successfully'}, 200)
     except Exception as e:
         raise HTTPException(status_code = 400, detail=str(e))
+
+
+@router.get('/get-users', dependencies = [Depends(verify_role(3))])
+async def get_users(
+        offset: int = Query(default = 0, ge = 0),
+        limit: int = Query(default = 10, ge = 1, le = 100)
+):
+    with PSQLDatabase() as db:
+        cursor = db.get_cursor()
+
+        cursor.execute("""
+            select count(*) from utenti
+        """)
+        total_users = cursor.fetchone()[0]
+
+        cursor.execute("""
+            select id_utente, nome, cognome, username, ruolo, id_istituto, email
+            from utenti
+            order by id_utente
+            limit %s offset %s
+        """, (limit, offset))
+        users = db.fetchall_to_dict()
+
+    return JSONResponse(
+        {
+            "users": users,
+            "total": total_users
+        },
+        200
+    )
+
+
+@router.put('/update-user/{user_id}', dependencies = [Depends(verify_role(3))])
+async def update_user(request: Request, current_user: dict = Depends(get_current_user)):
+    user_data = (await request.json()).get('user_data')
+    print(user_data)
+    user_id = user_data['id_utente']
+
+    try:
+        with PSQLDatabase() as db:
+            cursor = db.get_cursor()
+
+            cursor.execute("""
+                select ruolo
+                from utenti
+                where id_utente = %s
+            """, (user_id,))
+
+            result = cursor.fetchone()
+            if not result:
+                raise HTTPException(status_code = 404, detail = "User not found")
+
+            target_role = result[0]
+            current_user_role = int(current_user['ruolo'])
+
+            if user_id == current_user['id_utente'] and 'ruolo' in user_data:
+                raise HTTPException(
+                    status_code = 403,
+                    detail = "You cannot modify your own role. Please ask someone with a higher role!"
+                )
+
+            if target_role >= current_user_role:
+                raise HTTPException(
+                    status_code = 403,
+                    detail = "Cannot modify users with equal or higher role. Please ask someone with a higher role!"
+                )
+
+            if 'ruolo' in user_data and int(user_data['ruolo']) >= current_user_role:
+                raise HTTPException(
+                    status_code = 403,
+                    detail = "Cannot set role equal to or higher than your own"
+                )
+
+            update_fields = []
+            values = []
+
+            for key, value in user_data.items():
+                if key in ['nome', 'cognome', 'username', 'ruolo', 'email']:
+                    update_fields.append(f'{key} = %s')
+                    values.append(value)
+
+            if not update_fields:
+                raise HTTPException(status_code=400, detail="No valid fields to update")
+
+            values.append(user_id)
+
+            cursor.execute(f"""
+                update utenti
+                set {', '.join(update_fields)}
+                where id_utente = %s
+                returning id_utente
+            """, tuple(values))
+
+            if not cursor.fetchone()[0]:
+                raise HTTPException(status_code=404, detail="User not found")
+
+            db.commit()
+
+            print(user_data)
+
+            if 'ruolo' in user_data:
+                try:
+                    async with RedisDatabase() as redis:
+                        pattern = f'{user_id}:*'
+                        token_keys = await redis.keys(pattern)
+
+                        if token_keys:
+                            for key in token_keys:
+                                token_data = await redis.get(key)
+
+                                if token_data:
+                                    token_info = json.loads(token_data)
+                                    token_info['ruolo'] = user_data['ruolo']
+                                    await redis.set(key, json.dumps(token_info))
+                                    
+                except Exception as redis_error:
+                    print("Redis error:", str(redis_error))
+                    # Continue with the response even if Redis update fails
+                    return JSONResponse({
+                        "message": "User updated successfully but token update failed",
+                        "error": str(redis_error)
+                    }, 200)
+
+        return JSONResponse({"message": "User updated successfully"}, 200)
+    except Exception as e:
+        raise HTTPException(status_code = 400, detail = str(e))

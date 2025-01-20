@@ -6,7 +6,7 @@ from starlette.responses import JSONResponse
 
 from Routes.exceptions import InvalidRequestError
 from Routes.services.file_operations import upload_thumbnail
-from utils.database.DbHelper import PSQLDatabase
+from utils.database.db_helper import PSQLDatabase
 
 log = getLogger("FileLogger")
 
@@ -131,8 +131,6 @@ async def insert_book_into_database(data, thumbnail: UploadFile):
         'descrizione': data['descrizione'],
     }
 
-    print(data)
-
     author_names = [name.strip() for names in data['nomeAutore'] for name in names.split(',')]
     author_surnames = [surname.strip() for surnames in data['cognomeAutore'] for surname in surnames.split(',')]
 
@@ -141,10 +139,7 @@ async def insert_book_into_database(data, thumbnail: UploadFile):
 
     authors = [{'nome': nome, 'cognome': cognome} for nome, cognome in zip(author_names, author_surnames)]
 
-    print("authors", authors)
-
     try:
-        print('checking isbn')
         if check_isbn_exists(libro.get('isbn')):
             with PSQLDatabase() as db:
                 cursor = db.get_cursor()
@@ -156,15 +151,12 @@ async def insert_book_into_database(data, thumbnail: UploadFile):
                 201
             )
 
-        print('isbn checked')
-
         id_collocazione = insert_collocazione(collocazione)
         id_libro = insert_libro(libro, id_collocazione)
 
         for author in authors:
             id_autore = insert_autore(author)
             insert_libro_autori(id_libro, id_autore)
-        print('uploading thumbnail')
         if thumbnail:
             await upload_thumbnail(thumbnail, id_libro)
         log.info(f"Book '{libro['titolo']}' inserted successfully into the database.")
