@@ -48,56 +48,47 @@ async def get_books(
     with PSQLDatabase() as db:
         cursor = db.get_cursor()
         if search:
-            cursor.execute(
-                """
-                WITH filtered_books AS (
-                    SELECT DISTINCT l.id_libro, l.titolo, l.thumbnail_path, l.isbn, 
-                           l.quantita, l.casa_editrice, l.descrizione,
-                           i.id_istituto, c.scaffale,
-                           ARRAY_AGG(DISTINCT g.nome_genere) AS generi,
-                           COUNT(*) OVER () AS total_count
-                    FROM libri l
-                    LEFT JOIN collocazioni c ON l.id_collocazione = c.id_collocazione
-                    LEFT JOIN istituti i ON c.id_istituto = i.id_istituto
-                    LEFT JOIN libro_autori la ON l.id_libro = la.id_libro
-                    LEFT JOIN autori a ON la.id_autore = a.id_autore
-                    LEFT JOIN libro_generi lg ON l.id_libro = lg.id_libro
-                    LEFT JOIN generi g ON lg.id_genere = g.id_genere
-                    WHERE l.titolo ILIKE %s 
-                       OR a.nome ILIKE %s 
-                       OR a.cognome ILIKE %s
-                       OR g.nome_genere ILIKE %s
-                    GROUP BY l.id_libro, i.id_istituto, c.scaffale
-                    ORDER BY l.id_libro
-                    LIMIT %s OFFSET %s
-                )
-                SELECT *, CEIL(total_count * 1.0 / %s)::int AS maxpage 
-                FROM filtered_books
-                """,
-                (f'%{search}%', f'%{search}%', f'%{search}%', f'%{search}%', limit, offset, limit)
+            cursor.execute("""
+                select l.id_libro, l.titolo, l.thumbnail_path, l.isbn, l.quantita,
+                    l.casa_editrice, l.descrizione, i.id_istituto, c.scaffale,
+                    array_agg(g.nome_genere) as generi,
+                    count(*) over () as total_count,
+                    ceil(count(*) over () *1.0 / %s)::int as maxpage
+                from libri l, collocazioni c, istituti i, libro_autori la, autori a,
+                    libro_generi lg, generi g
+                where l.id_collocazione = c.id_collocazione
+                    and c.id_istituto = i.id_istituto
+                    AND l.id_libro = la.id_libro
+                    AND la.id_autore = a.id_autore
+                    AND l.id_libro = lg.id_libro
+                    AND lg.id_genere = g.id_genere
+                    and (l.titolo ilike %s
+                        or a.nome ilike %s
+                        or a.cognome ilike %s
+                        or g.nome_genere ilike %s)
+                group by l.id_libro, i.id_istituto, c.scaffale
+                order by l.id_libro
+                limit %s offset %s
+                """, (limit, f'%{search}%', f'%{search}%', f'%{search}%', f'%{search}%',
+                      limit, offset)
             )
         else:
-            cursor.execute(
-                """
-                WITH filtered_books AS (
-                    SELECT l.id_libro, l.titolo, l.thumbnail_path, l.isbn, 
-                           l.quantita, l.casa_editrice, l.descrizione,
-                           i.id_istituto, c.scaffale,
-                           ARRAY_AGG(DISTINCT g.nome_genere) AS generi,
-                           COUNT(*) OVER () AS total_count
-                    FROM libri l
-                    LEFT JOIN collocazioni c ON l.id_collocazione = c.id_collocazione
-                    LEFT JOIN istituti i ON c.id_istituto = i.id_istituto
-                    LEFT JOIN libro_generi lg ON l.id_libro = lg.id_libro
-                    LEFT JOIN generi g ON lg.id_genere = g.id_genere
-                    GROUP BY l.id_libro, i.id_istituto, c.scaffale
-                    ORDER BY l.id_libro
-                    LIMIT %s OFFSET %s
-                )
-                SELECT *, CEIL(total_count * 1.0 / %s)::int AS maxpage 
-                FROM filtered_books
-                """,
-                (limit, offset, limit)
+            cursor.execute("""
+                SELECT l.id_libro, l.titolo, l.thumbnail_path, l.isbn, 
+                       l.quantita, l.casa_editrice, l.descrizione,
+                       i.id_istituto, c.scaffale,
+                       ARRAY_AGG(g.nome_genere) AS generi,
+                       COUNT(*) OVER () AS total_count,
+                       CEIL(COUNT(*) OVER () * 1.0 / %s)::int AS maxpage 
+                FROM libri l, collocazioni c, istituti i, libro_generi lg, generi g
+                WHERE l.id_collocazione = c.id_collocazione
+                    AND c.id_istituto = i.id_istituto
+                    AND l.id_libro = lg.id_libro
+                    AND lg.id_genere = g.id_genere
+                GROUP BY l.id_libro, i.id_istituto, c.scaffale
+                ORDER BY l.id_libro
+                LIMIT %s OFFSET %s
+                """, (limit, limit, offset)
             )
 
         raw_books: list = db.fetchall_to_dict()
