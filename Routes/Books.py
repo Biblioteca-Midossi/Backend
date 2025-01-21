@@ -93,17 +93,18 @@ async def get_books(
 
         raw_books: list = db.fetchall_to_dict()
 
+        if not raw_books:
+            raise HTTPException(404, 'Books not found')
+
         books = []
         for book in raw_books:
             # Fetch authors for each book
-            cursor.execute(
-                """
+            cursor.execute("""
                 SELECT a.nome, a.cognome 
-                FROM libro_autori as la
-                LEFT JOIN autori a ON la.id_autore = a.id_autore
-                WHERE la.id_libro = %s
-                """,
-                (book['id_libro'],)
+                FROM libro_autori la, autori a
+                WHERE la.id_autore = a.id_autore
+                    AND la.id_libro = %s
+                """, (book['id_libro'],)
             )
             authors = [f"{author['nome']} {author['cognome']}" for author in db.fetchall_to_dict()]
             books.append({
@@ -151,18 +152,17 @@ async def get_book(book_id: int = Path(...)):
         cursor = db.get_cursor()
 
         # Fetch book details
-        cursor.execute(
-            """
+        cursor.execute("""
             SELECT l.*, c.id_istituto, c.scaffale, ARRAY_AGG(DISTINCT g.nome_genere) as generi
-            FROM libri l
-            JOIN collocazioni c ON l.id_collocazione = c.id_collocazione
-            LEFT JOIN libro_generi lg ON l.id_libro = lg.id_libro
-            LEFT JOIN generi g ON lg.id_genere = g.id_genere
-            WHERE l.id_libro = %s
+            FROM libri l, collocazioni c, libro_generi lg, generi g
+            WHERE l.id_collocazione = c.id_collocazione
+                AND l.id_libro = lg.id_libro
+                AND lg.id_genere = g.id_genere
+                AND l.id_libro = %s
             GROUP BY l.id_libro, c.id_istituto, c.scaffale
-            """,
-            (book_id,)
+            """, (book_id,)
         )
+
         book = db.fetchone_to_dict()
 
         if not book:
@@ -171,10 +171,10 @@ async def get_book(book_id: int = Path(...)):
         # Fetch authors for the book
         cursor.execute(
             """
-            SELECT a.nome, a.cognome 
-            FROM libro_autori la
-            LEFT JOIN autori a ON la.id_autore = a.id_autore
-            WHERE la.id_libro = %s
+            SELECT a.nome, a.cognome
+            FROM libro_autori la, autori a
+            WHERE la.id_autore = a.id_autore
+                AND la.id_libro = %s
             """,
             (book_id,)
         )

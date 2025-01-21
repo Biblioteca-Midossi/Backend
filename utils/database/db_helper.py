@@ -62,13 +62,17 @@ class PSQLDatabase:
     def get_cursor(self):
         return self.cursor
 
-    def fetchone_to_dict(self) -> dict:
+    def fetchone_to_dict(self) -> dict | None:
         row = self.cursor.fetchone()
+        if not row:
+            return None
         colnames = [desc[0] for desc in self.cursor.description]
         return dict(zip(colnames, row))
 
-    def fetchall_to_dict(self) -> list[dict]:
+    def fetchall_to_dict(self) -> list[dict] | None:
         rows = self.cursor.fetchall()
+        if not rows:
+            return None
         colnames = [desc[0] for desc in self.cursor.description]
         return [dict(zip(colnames, row)) for row in rows]
 
