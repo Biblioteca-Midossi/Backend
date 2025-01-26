@@ -1,3 +1,5 @@
+import time
+
 from fastapi import (
     APIRouter,
     HTTPException,
@@ -148,6 +150,7 @@ async def get_book(book_id: int = Path(...)):
     **Raises**:
     - HTTPException: If an error occurs while retrieving the book.
     """
+    start_time = time.time()    # start timer
     with PSQLDatabase() as db:
         cursor = db.get_cursor()
 
@@ -196,6 +199,8 @@ async def get_book(book_id: int = Path(...)):
         }
 
         log.info(f"Requested book {book_details}")
+        execution_time = time.time() - start_time  # End timer
+        print(f"Endpoint executed in {execution_time:.4f} seconds.")
         return JSONResponse({'book': book_details}, 200)
 
 

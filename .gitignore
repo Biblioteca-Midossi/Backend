@@ -20,3 +20,5 @@ cert.pem
 
 # Logs folder
 logs/
+backup.sql
+Caddyfile
