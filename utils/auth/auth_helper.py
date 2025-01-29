@@ -62,3 +62,12 @@ def verify_user(username: str, password: str):
             log.error(f"Password verification error: {e}")
 
     return None
+
+async def get_foo_user():
+    """Dummy admin user for no_login_mode"""
+    return {
+        'id_utente': 0,
+        'username': 'foo',
+        'ruolo': 4,
+        'id_istituto': 0
+    }

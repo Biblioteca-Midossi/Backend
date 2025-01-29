@@ -1,9 +1,11 @@
 import secrets
 from typing import Annotated
 
+from dotenv import get_key
 from fastapi import Depends, HTTPException, Request
 
 from Routes.services.user_service import get_user_by_id
+from utils.auth.auth_helper import get_foo_user
 from utils.database.db_helper import RedisDatabase
 
 ACCESS_TOKEN_EXPIRE = 7200  # 2 hours
@@ -11,6 +13,9 @@ REFRESH_TOKEN_EXPIRE = 2592000  # 30 days
 
 
 async def get_current_user(request: Request):
+    if bool(get_key('.env', 'NO_LOGIN_MODE')):
+        return get_foo_user()
+
     access_token = request.cookies.get('access_token')
     refresh_token = request.cookies.get('refresh_token')
     device_id = request.cookies.get('device_id')
