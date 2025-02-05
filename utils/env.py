@@ -12,12 +12,14 @@ def get_env(key: str) -> str:
         print('returning from secrets')
         return secret_path.read_text()
 
+    # Fallback to .env file
+    env_path = Path(".env")
+    if env_path.exists():
+        print('returning from .env')
+        return get_key('.env', key)
+
     # Fallback to env variables
     value = os.getenv(key)
     if value is not None:
         print('returning from environment')
         return value
-
-    # Fallback to .env file
-    print('returning from .env')
-    return get_key('.env', key)
