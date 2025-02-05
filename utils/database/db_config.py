@@ -1,22 +1,23 @@
 import logging
 import os
-from dotenv import get_key
 from typing import Dict, Optional
+
+from utils.env import get_env
 
 log = logging.getLogger('FileLogger')
 
 if os.path.exists('.env'):
     try:
-        host = get_key('.env', 'HOST')
+        host = get_env( 'HOST')
 
-        psql_database = get_key('.env', 'DBNAME')
-        psql_user = get_key('.env', 'USER')
-        psql_password = get_key('.env', 'PASSWORD')
-        psql_port = get_key('.env', 'PORT')
-        psql_options = f"-c search_path={get_key('.env', 'SCHEMA')}"
+        psql_database = get_env('DBNAME')
+        psql_user = get_env('USER')
+        psql_password = get_env('PASSWORD')
+        psql_port = get_env('PORT')
+        psql_options = f"-c search_path={get_env('SCHEMA')}"
 
-        redis_port = get_key('.env', 'REDIS_PORT')
-        redis_password = get_key('.env', 'REDIS_PASSWORD')
+        redis_port = get_env('REDIS_PORT')
+        redis_password = get_env('REDIS_PASSWORD')
 
     except Exception:
         log.error("Your .env is not complete. Try checking for missing fields")

@@ -1,5 +1,6 @@
 import os
 from logging import getLogger
+from pathlib import Path
 from typing import Literal
 
 from fastapi import APIRouter, HTTPException
@@ -12,7 +13,7 @@ router = APIRouter(
     tags = ['assets'],
     responses = {
         404: {
-            "description": "Not found"
+            "detail": "Thumbnail not found"
         },
         200: {
             "content": {"image/png": {}}
@@ -21,7 +22,7 @@ router = APIRouter(
 )
 
 
-@router.get("/thumbnails/{book_id}.png", response_class = FileResponse)
+@router.get("/thumbnails/{book_id}", response_class = FileResponse)
 async def get_thumbnail(book_id: int | Literal[".no-thumbnail-found"]):
     """
     Get the thumbnail image for a book by its ISBN.
@@ -44,19 +45,15 @@ async def get_thumbnail(book_id: int | Literal[".no-thumbnail-found"]):
     - HTTPException: If the thumbnail is not found.
     - HTTPException: If there's an error retrieving the thumbnail.
     """
-    try:
-        thumbnail_path = f"./assets/thumbnails/{book_id}.png"
-        if os.path.exists(thumbnail_path):
-            return FileResponse(
-                thumbnail_path,
-                headers = {
-                    "Cache-Control": "no-cache, no-store, must-revalidate",
-                    "Pragma": "no-cache",
-                    "Expires": "0"
-                }
-            )
-        else:
-            raise HTTPException(status_code = 404, detail = "Thumbnail not found")
-    except Exception as e:
-        log.error(e)
-        raise HTTPException(status_code = 500, detail = str(e))
+    thumbnail_path = Path(f"./assets/thumbnails/{book_id}")
+    if thumbnail_path.exists():
+        return FileResponse(
+            thumbnail_path,
+            headers = {
+                "Cache-Control": "no-cache, no-store, must-revalidate",
+                "Pragma": "no-cache",
+                "Expires": "0"
+            }
+        )
+    else:
+        raise HTTPException(status_code = 404, detail = "Thumbnail not found")

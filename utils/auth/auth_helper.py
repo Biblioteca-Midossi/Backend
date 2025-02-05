@@ -1,16 +1,16 @@
 from logging import getLogger
 
 import bcrypt
-from dotenv import get_key
 from itsdangerous import URLSafeTimedSerializer, BadSignature, SignatureExpired
 
 from utils.database.db_helper import PSQLDatabase
+from utils.env import get_env
 
 log = getLogger("FileLogger")
 debug = log.debug
 
 # Serializer for cookie handling
-serializer = URLSafeTimedSerializer(get_key('.env', 'COOKIE_KEY'))
+serializer = URLSafeTimedSerializer(get_env('COOKIE_KEY'))
 
 
 def hash_password(password: str):

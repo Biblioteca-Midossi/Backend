@@ -1,5 +1,4 @@
 import secrets
-from dotenv import get_key
 from fastapi import APIRouter, HTTPException, Request
 from fastapi.responses import JSONResponse
 
@@ -10,7 +9,7 @@ from Routes.services.user_service import check_user_exists, create_user
 from utils.auth.auth_helper import verify_user, hash_password, get_foo_user
 from utils.auth.oauth2 import create_tokens, refresh_access_token, verify_token
 from utils.database.db_helper import RedisDatabase
-
+from utils.env import get_env
 
 log = logging.getLogger('FileLogger')
 debug = log.debug
@@ -157,7 +156,7 @@ async def logout(request: Request):
 
 @router.get('/check')
 async def auth_check(request: Request):
-    if bool(get_key('.env', 'NO_LOGIN_MODE')):
+    if bool(get_env('NO_LOGIN_MODE')):
         foo_user = await get_foo_user()
         return JSONResponse(foo_user)
 
