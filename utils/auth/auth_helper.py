@@ -51,7 +51,7 @@ def verify_user(username: str, password: str):
             return None
 
         try:
-            if verify_password(password, stored_password):
+            if verify_password(password, stored_password[0]):
                 cursor.execute("""
                     SELECT id_utente, username, id_istituto, ruolo
                     FROM utenti
