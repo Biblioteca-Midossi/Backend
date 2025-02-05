@@ -112,22 +112,27 @@ async def register(user: UserForm):
 
 @router.post('/login')
 async def login(credentials: TokenRequest, request: Request):
-    user = verify_user(credentials.username, credentials.password)
-    if not user:
-        raise HTTPException(
-            status_code = 401,
-            detail = "Incorrect username or password"
-        )
+    try:
+        print(credentials.username, credentials.password)
+        user = verify_user(credentials.username, credentials.password)
+        print('user:', user)
+        if not user:
+            raise HTTPException(
+                status_code = 401,
+                detail = "Incorrect username or password"
+            )
 
-    device_id = request.cookies.get('device_id')
-    if not device_id:
-        device_id = secrets.token_urlsafe(16)
-    tokens = await create_tokens(user, device_id)
+        device_id = request.cookies.get('device_id')
+        print(device_id)
+        if not device_id:
+            device_id = secrets.token_urlsafe(16)
+        tokens = await create_tokens(user, device_id)
 
-    response = JSONResponse({'message': 'Login successful'}, 200)
+        response = JSONResponse({'message': 'Login successful'}, 200)
 
-    return await _set_auth_cookies(response, tokens, device_id)
-
+        return await _set_auth_cookies(response, tokens, device_id)
+    except Exception as e:
+        log.error('Error while logging in:', e)
 
 @router.get('/logout')
 async def logout(request: Request):
@@ -158,6 +163,7 @@ async def logout(request: Request):
 @router.get('/check')
 async def auth_check(request: Request):
     access_token = request.cookies.get('access_token')
+    print('access_token:', access_token)
     if not access_token:
         raise HTTPException(
             status_code=401,
@@ -165,6 +171,7 @@ async def auth_check(request: Request):
         )
 
     user_data = await verify_token(access_token)
+    print("user_data: ", user_data)
     if not user_data:
         raise HTTPException(
             status_code=401,

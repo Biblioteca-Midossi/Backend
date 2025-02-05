@@ -49,46 +49,44 @@ async def get_books(
         cursor = db.get_cursor()
         if search:
             cursor.execute("""
-                select l.id_libro, l.titolo, l.thumbnail_path, l.isbn, l.quantita,
-                    l.casa_editrice, l.descrizione, i.id_istituto, c.scaffale,
-                    array_agg(g.nome_genere) as generi,
-                    count(*) over () as total_count,
-                    ceil(count(*) over () *1.0 / %s)::int as maxpage
-                from libri l, collocazioni c, istituti i, libro_autori la, autori a,
-                    libro_generi lg, generi g
-                where l.id_collocazione = c.id_collocazione
-                    and c.id_istituto = i.id_istituto
-                    AND l.id_libro = la.id_libro
-                    AND la.id_autore = a.id_autore
-                    AND l.id_libro = lg.id_libro
-                    AND lg.id_genere = g.id_genere
-                    and (l.titolo ilike %s
-                        or a.nome ilike %s
-                        or a.cognome ilike %s
-                        or g.nome_genere ilike %s)
-                group by l.id_libro, i.id_istituto, c.scaffale
-                order by l.id_libro
-                limit %s offset %s
-                """, (limit, f'%{search}%', f'%{search}%', f'%{search}%', f'%{search}%',
-                      limit, offset)
+                SELECT l.id_libro, l.titolo, l.thumbnail_path, l.isbn, l.quantita,
+                       l.casa_editrice, l.descrizione, i.id_istituto, c.scaffale,
+                       ARRAY_AGG(DISTINCT g.nome_genere) as generi,
+                       COUNT(*) OVER () as total_count,
+                       CEIL(COUNT(*) OVER () *1.0 / %s)::int as maxpage
+                FROM libri l
+                LEFT JOIN collocazioni c ON l.id_collocazione = c.id_collocazione
+                LEFT JOIN istituti i ON c.id_istituto = i.id_istituto
+                LEFT JOIN libro_autori la ON l.id_libro = la.id_libro
+                LEFT JOIN autori a ON la.id_autore = a.id_autore
+                LEFT JOIN libro_generi lg ON l.id_libro = lg.id_libro
+                LEFT JOIN generi g ON lg.id_genere = g.id_genere
+                WHERE l.titolo ilike %s 
+                    OR a.nome ilike %s
+                    OR a.cognome ilike %s
+                    OR g.nome_genere ilike %s
+                GROUP BY l.id_libro, i.id_istituto, c.scaffale
+                ORDER BY l.id_libro
+                LIMIT %s OFFSET %s
+            """, (limit, f'%{search}%', f'%{search}%', f'%{search}%', f'%{search}%', limit, offset)
             )
         else:
             cursor.execute("""
                 SELECT l.id_libro, l.titolo, l.thumbnail_path, l.isbn, 
                        l.quantita, l.casa_editrice, l.descrizione,
                        i.id_istituto, c.scaffale,
-                       ARRAY_AGG(g.nome_genere) AS generi,
+                       ARRAY_AGG(DISTINCT g.nome_genere) AS generi,
                        COUNT(*) OVER () AS total_count,
                        CEIL(COUNT(*) OVER () * 1.0 / %s)::int AS maxpage 
-                FROM libri l, collocazioni c, istituti i, libro_generi lg, generi g
-                WHERE l.id_collocazione = c.id_collocazione
-                    AND c.id_istituto = i.id_istituto
-                    AND l.id_libro = lg.id_libro
-                    AND lg.id_genere = g.id_genere
+                FROM libri l
+                LEFT JOIN collocazioni c ON l.id_collocazione = c.id_collocazione
+                LEFT JOIN istituti i ON c.id_istituto = i.id_istituto
+                LEFT JOIN libro_generi lg ON l.id_libro = lg.id_libro
+                LEFT JOIN generi g ON lg.id_genere = g.id_genere
                 GROUP BY l.id_libro, i.id_istituto, c.scaffale
                 ORDER BY l.id_libro
                 LIMIT %s OFFSET %s
-                """, (limit, limit, offset)
+            """, (limit, limit, offset)
             )
 
         raw_books: list = db.fetchall_to_dict()
@@ -224,13 +222,14 @@ async def create_book(data: Request, thumbnail: UploadFile = File(None)):
     try:
         form_data = await data.form()
         data_str = form_data.get('data')
+        log.debug(data_str)
 
         if not data_str:
             raise HTTPException(status_code = 400, detail = "Missing data in the form")
 
         data = json.loads(data_str)
-        if len(data) != 10:
-            raise HTTPException(status_code = 400, detail = "Data list is not complete")
+        # if len(data) != 10:
+        #    raise HTTPException(status_code = 400, detail = "Data list is not complete")
 
         # Add entry to database
         response: JSONResponse = await insert_book_into_database(data, thumbnail)

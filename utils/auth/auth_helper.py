@@ -44,14 +44,15 @@ def verify_user(username: str, password: str):
 
         # First, check if user exists
         cursor.execute('SELECT password FROM utenti WHERE username = %s', (username,))
-        stored_password = cursor.fetchone()[0]
+        stored_password = cursor.fetchone()
+        print(stored_password)
 
         if not stored_password:
             log.error(f"User {username} not found")
             return None
 
         try:
-            if verify_password(password, stored_password):
+            if verify_password(password, stored_password[0]):
                 cursor.execute("""
                     SELECT id_utente, username, id_istituto, ruolo
                     FROM utenti
