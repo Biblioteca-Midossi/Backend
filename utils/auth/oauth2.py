@@ -15,64 +15,58 @@ async def get_current_user(request: Request):
     refresh_token = request.cookies.get('refresh_token')
     device_id = request.cookies.get('device_id')
 
-    # if no access token but refresh token, try refreshing
-    if not access_token and refresh_token:
-        new_tokens = await refresh_access_token(refresh_token, device_id)
-        if new_tokens:
-            access_token = new_tokens['access_token']
+    if not device_id:
+        raise HTTPException(status_code=401, detail="Missing device ID")
 
-    # if no access token after refresh
-    if not access_token:
-        raise HTTPException(
-            status_code = 401,
-            detail = "Not authenticated"
-        )
+    user_data = None
+    new_tokens = None
 
-    user_data = await verify_token(access_token, device_id)
+    if access_token:
+        user_data = await verify_token(access_token, device_id)
 
-    # if token is invalid/expired and there is refresh token, try to refresh
     if not user_data and refresh_token:
         new_tokens = await refresh_access_token(refresh_token, device_id)
         if new_tokens:
             user_data = await verify_token(new_tokens['access_token'], device_id)
 
     if not user_data:
-        raise HTTPException(
-            status_code = 401,
-            detail = "Invalid token"
-        )
+        raise HTTPException(status_code=401, detail="Not authenticated")
 
-    response = request.scope.get('response')
-
-    # add new tokens if refreshed
-    if response and new_tokens:
-        response.set_cookie(
-            key = 'access_token',
-            value = new_tokens['access_token'],
-            httponly = True,
-            secure = False,  # TODO: set to True when using HTTPS
-            samesite = 'strict',
-            max_age = 7200
-        )
-        response.set_cookie(
-            key = 'refresh_token',
-            value = new_tokens['refresh_token'],
-            httponly = True,
-            secure = False,  # TODO: set to True when using HTTPS
-            samesite = 'strict',
-            max_age = 2592000
-        )
-
-    return user_data
+    return {"user": user_data, "new_tokens": new_tokens}
 
 
 def verify_role(required_role: int):
-    def role_checker(user: Annotated[dict, Depends(get_current_user)]):
+    def role_checker(auth_data: Annotated[dict, Depends(get_current_user)]):
+        user = auth_data['user']
         if int(user['ruolo']) < required_role:
             raise HTTPException(status_code = 403, detail = "Insufficient permissions")
-        return user
+        return auth_data
 
     return role_checker
+
+
+async def create_access_token(user_data: dict, device_id: str):
+    access_token = secrets.token_urlsafe(32)
+    user_id = user_data['id_utente']
+
+    token_data = {
+        "id_utente": user_id,
+        "username" : user_data['username'],
+        "ruolo": user_data['ruolo'],
+        "device_id" : device_id
+    }
+
+    async with RedisDatabase() as redis:
+        async with redis.pipeline() as pipe:
+            old_access_tk = await redis.keys(f'{user_id}:device:{device_id}:access:*')
+            if old_access_tk:
+                await pipe.delete(*old_access_tk)
+
+            await pipe.hset(f'{user_id}:device:{device_id}:access:{access_token}', mapping=token_data)
+            await pipe.expire(f'{user_id}:device:{device_id}:access:{access_token}', ACCESS_TOKEN_EXPIRE)
+            await pipe.execute()
+
+    return access_token
 
 
 async def create_tokens(user_data: dict, device_id: str):
@@ -88,20 +82,23 @@ async def create_tokens(user_data: dict, device_id: str):
     }
 
     async with RedisDatabase() as redis:
-        # try to delete old user-device tokens
-        old_tokens = await redis.keys(f'{user_id}:device{device_id}:*')
-        if old_tokens:
-            await redis.delete(*old_tokens)
+        async with redis.pipeline() as pipe:
+            # try to delete old user-device tokens
+            old_tokens = await redis.keys(f'{user_id}:device{device_id}:*')
+            if old_tokens:
+                await pipe.delete(*old_tokens)
 
-        # store in redis and set expiration
-        await redis.hset(f'{user_id}:device:{device_id}:access:{access_token}', mapping = token_data)
-        await redis.expire(f'{user_id}:device:{device_id}:access:{access_token}', ACCESS_TOKEN_EXPIRE)
+            # store in redis and set expiration
+            await pipe.hset(f'{user_id}:device:{device_id}:access:{access_token}', mapping = token_data)
+            await pipe.expire(f'{user_id}:device:{device_id}:access:{access_token}', ACCESS_TOKEN_EXPIRE)
 
-        await redis.set(
-            f"{user_id}:device:{device_id}:refresh:{refresh_token}",
-            user_data['id_utente'],
-            ex = REFRESH_TOKEN_EXPIRE
-        )
+            await pipe.set(
+                f"{user_id}:device:{device_id}:refresh:{refresh_token}",
+                user_data['id_utente'],
+                ex = REFRESH_TOKEN_EXPIRE
+            )
+
+            await pipe.execute()
 
     return {
         "access_token": access_token,
@@ -118,8 +115,10 @@ async def verify_token(token: str, device_id: str = None):
             return None
 
         user_data = await redis.hgetall(token_key[0])
-        user_data['id_utente'], user_data['ruolo'] = int(user_data['id_utente']), int(user_data['ruolo'])
+        if device_id and user_data.get('device_id') != device_id:
+            return None
 
+        user_data['id_utente'], user_data['ruolo'] = int(user_data['id_utente']), int(user_data['ruolo'])
         return user_data
 
 
@@ -134,4 +133,7 @@ async def refresh_access_token(refresh_token: str, device_id: str):
             return None
 
         user_data = await get_user_by_id(user_id)
-        return await create_tokens(user_data, device_id)
+        return {
+            "access_token": await create_access_token(user_data, device_id),
+            "refresh_token": refresh_token
+        }

@@ -113,52 +113,57 @@ async def register(user: UserForm):
 @router.post('/login')
 async def login(credentials: TokenRequest, request: Request):
     try:
-        print(credentials.username, credentials.password)
         user = verify_user(credentials.username, credentials.password)
-        print('user:', user)
         if not user:
-            raise HTTPException(
-                status_code = 401,
-                detail = "Incorrect username or password"
-            )
+            raise HTTPException(status_code=401, detail="Incorrect username or password")
 
-        device_id = request.cookies.get('device_id')
-        print(device_id)
-        if not device_id:
-            device_id = secrets.token_urlsafe(16)
+        device_id = request.cookies.get('device_id') or secrets.token_urlsafe(16)
         tokens = await create_tokens(user, device_id)
 
         response = JSONResponse({'message': 'Login successful'}, 200)
-
         return await _set_auth_cookies(response, tokens, device_id)
+
+    except HTTPException:
+        raise
     except Exception as e:
-        log.error('Error while logging in:', e)
+        log.error(f'Error while logging in: {str(e)}')
+        raise HTTPException(status_code=500, detail="Internal server error")
+
 
 @router.get('/logout')
 async def logout(request: Request):
-    access_token = request.cookies.get('access_token')
-    ref_token = request.cookies.get('refresh_token')
-    device_id = request.cookies.get('device_id')
+    try:
+        access_token = request.cookies.get('access_token')
+        ref_token = request.cookies.get('refresh_token')
+        device_id = request.cookies.get('device_id')
 
-    if access_token or ref_token:
-        async with RedisDatabase() as redis:
-            if access_token:
+        if access_token and device_id:
+            async with RedisDatabase() as redis:
                 user_data = await verify_token(access_token)
                 if user_data:
-                    # delete all tokens for user
-                    old_tokens = await redis.keys(f'{user_data['id_utente']}:device:{device_id}:*')
+                    # Delete all tokens for this device
+                    pattern = f"{user_data['id_utente']}:device:{device_id}:*"
+                    old_tokens = await redis.keys(pattern)
                     if old_tokens:
                         await redis.delete(*old_tokens)
 
-    response = JSONResponse({
-        'status': 'successful',
-        'message': 'Successfully logged out!'
-    }, 200)
-    response.delete_cookie('access_token')
-    response.delete_cookie('refresh_token')
-    response.delete_cookie('device_id')
-    return response
+        response = JSONResponse({
+            'status': 'successful',
+            'message': 'Successfully logged out!'
+        }, 200)
 
+    except Exception as e:
+        log.error(f'Error logging out: {e}')
+        response = JSONResponse({
+            'status': 'error',
+            'message': 'Logout failed'
+        }, 500)
+    finally:
+        # Always clear cookies even if redis operations fail
+        response.delete_cookie('access_token')
+        response.delete_cookie('refresh_token')
+        response.delete_cookie('device_id')
+        return response
 
 @router.get('/check')
 async def auth_check(request: Request):
