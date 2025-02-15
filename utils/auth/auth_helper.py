@@ -18,11 +18,14 @@ def hash_password(password: str):
 
 
 def verify_password(plain_password: str, hashed_password: str):
-    # debug(f"{plain_password.encode('utf-8')}, {hashed_password}" )
-    return bcrypt.checkpw(
-        password = plain_password.encode('utf-8'),
-        hashed_password = hashed_password.encode('utf-8')
-    )
+    try:
+        return bcrypt.checkpw(
+            password = plain_password.encode('utf-8'),
+            hashed_password = hashed_password.encode('utf-8')
+        )
+    except (ValueError, TypeError) as e:
+        log.error(f"Password verification error: {e}")
+        return False
 
 
 def create_session_cookie(data: dict):

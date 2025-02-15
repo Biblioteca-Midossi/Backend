@@ -7,8 +7,8 @@ from starlette.responses import JSONResponse
 
 from Routes.models.auth_models import UserProfileUpdate
 from Routes.services.file_operations import upload_profile_picture
-from Routes.services.user_service import get_user_profile, update_user_profile
-from utils.auth.oauth2 import get_current_user, verify_role
+from Routes.services.user_service import get_user_profile, update_user_profile, get_user_by_id
+from utils.auth.oauth2 import get_current_user, verify_role, verify_token, create_access_token
 from utils.database.db_helper import PSQLDatabase, RedisDatabase
 
 log = logging.getLogger('FileLogger')
@@ -24,19 +24,47 @@ router = APIRouter(
     }
 )
 
+
 @router.get('/me')
-async def get_profile(user: Annotated[dict, Depends(get_current_user)]):
+async def get_profile(auth_data: Annotated[dict, Depends(get_current_user)]):
+    user = auth_data["user"]
+    new_tokens = auth_data["new_tokens"]
+
     profile = await get_user_profile(user['id_utente'])
     del profile['password']
-    return JSONResponse(profile, 200)
+
+    response = JSONResponse(profile, 200)
+
+    if new_tokens:
+        response.set_cookie(
+            key='access_token',
+            value=new_tokens['access_token'],
+            httponly=True,
+            secure=False,  # TODO: set to True in production
+            samesite='strict',
+            max_age=7200
+        )
+        response.set_cookie(
+            key='refresh_token',
+            value=new_tokens['refresh_token'],
+            httponly=True,
+            secure=False,  # TODO: set to True in production
+            samesite='strict',
+            max_age=2592000
+        )
+
+    return response
 
 
 @router.put('/me')
 async def update_profile(
-    user: Annotated[dict, Depends(get_current_user)],
+    auth_data: Annotated[dict, Depends(get_current_user)],
     profile_update: Optional[UserProfileUpdate] = Form(None),
     file: Optional[UploadFile] = File(None)
 ):
+    user = auth_data['user']
+    new_tokens = auth_data['new_tokens']
+
     try:
         update_data = {}
 
@@ -53,7 +81,7 @@ async def update_profile(
 
             with PSQLDatabase() as db:
                 cursor = db.get_cursor()
-                cursor.execute('select profile_picture from users where id = %s', (user['id_utente'],))
+                cursor.execute('select profile_picture from utenti where id_utente = %s', (user['id_utente'],))
                 profile_picture = cursor.fetchone()[0]
             update_data['profile_picture'] = profile_picture
 
@@ -65,7 +93,26 @@ async def update_profile(
         if update_data:
             await update_user_profile(user['id_utente'], update_data)
 
-        return JSONResponse({'message': 'Profile updated successfully'}, 200)
+        response = JSONResponse({'message': 'Profile updated successfully'}, 200)
+        if new_tokens:
+            response.set_cookie(
+                key='access_token',
+                value=new_tokens['access_token'],
+                httponly=True,
+                secure=False,
+                samesite='strict',
+                max_age=7200
+            )
+            response.set_cookie(
+                key='refresh_token',
+                value=new_tokens['refresh_token'],
+                httponly=True,
+                secure=False,
+                samesite='strict',
+                max_age=2592000
+            )
+
+        return response
     except Exception as e:
         raise HTTPException(status_code = 400, detail=str(e))
 
@@ -100,10 +147,12 @@ async def get_users(
     )
 
 
-@router.put('/update-user/{user_id}', dependencies = [Depends(verify_role(3))])
-async def update_user(request: Request, current_user: dict = Depends(get_current_user)):
+@router.put('/update-user/{user_id}', dependencies=[Depends(verify_role(3))])
+async def update_user(request: Request, auth_data: Annotated[dict, Depends(get_current_user)]):
+    user = auth_data["user"]
+    new_tokens = auth_data["new_tokens"]
+
     user_data = (await request.json()).get('user_data')
-    print(user_data)
     user_id = user_data['id_utente']
 
     try:
@@ -118,27 +167,27 @@ async def update_user(request: Request, current_user: dict = Depends(get_current
 
             result = cursor.fetchone()
             if not result:
-                raise HTTPException(status_code = 404, detail = "User not found")
+                raise HTTPException(status_code=404, detail="User not found")
 
             target_role = result[0]
-            current_user_role = int(current_user['ruolo'])
+            current_user_role = int(user['ruolo'])
 
-            if user_id == current_user['id_utente'] and 'ruolo' in user_data:
+            if user_id == user['id_utente'] and 'ruolo' in user_data:
                 raise HTTPException(
-                    status_code = 403,
-                    detail = "You cannot modify your own role. Please ask someone with a higher role!"
+                    status_code=403,
+                    detail="You cannot modify your own role. Please ask someone with a higher role!"
                 )
 
             if target_role >= current_user_role:
                 raise HTTPException(
-                    status_code = 403,
-                    detail = "Cannot modify users with equal or higher role. Please ask someone with a higher role!"
+                    status_code=403,
+                    detail="Cannot modify users with equal or higher role. Please ask someone with a higher role!"
                 )
 
             if 'ruolo' in user_data and int(user_data['ruolo']) >= current_user_role:
                 raise HTTPException(
-                    status_code = 403,
-                    detail = "Cannot set role equal to or higher than your own"
+                    status_code=403,
+                    detail="Cannot set role equal to or higher than your own"
                 )
 
             update_fields = []
@@ -166,8 +215,6 @@ async def update_user(request: Request, current_user: dict = Depends(get_current
 
             db.commit()
 
-            print(user_data)
-
             if 'ruolo' in user_data:
                 try:
                     async with RedisDatabase() as redis:
@@ -182,15 +229,35 @@ async def update_user(request: Request, current_user: dict = Depends(get_current
                                     token_info = json.loads(token_data)
                                     token_info['ruolo'] = user_data['ruolo']
                                     await redis.set(key, json.dumps(token_info))
-                                    
+
                 except Exception as redis_error:
                     print("Redis error:", str(redis_error))
-                    # Continue with the response even if Redis update fails
                     return JSONResponse({
                         "message": "User updated successfully but token update failed",
                         "error": str(redis_error)
                     }, 200)
 
-        return JSONResponse({"message": "User updated successfully"}, 200)
+        response = JSONResponse({"message": "User updated successfully"}, 200)
+
+        if new_tokens:
+            response.set_cookie(
+                key='access_token',
+                value=new_tokens['access_token'],
+                httponly=True,
+                secure=False,
+                samesite='strict',
+                max_age=7200
+            )
+            response.set_cookie(
+                key='refresh_token',
+                value=new_tokens['refresh_token'],
+                httponly=True,
+                secure=False,
+                samesite='strict',
+                max_age=2592000
+            )
+
+        return response
+
     except Exception as e:
-        raise HTTPException(status_code = 400, detail = str(e))
+        raise HTTPException(status_code=400, detail=str(e))
