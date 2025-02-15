@@ -75,18 +75,18 @@ async def refresh_token(request: Request):
     if not ref_token or not device_id:
         raise HTTPException(
             status_code = 401,
-            detail = "Missing refresh token or device ID"
+            detail = "Refresh token o device ID mancante"
         )
 
     new_tokens = await refresh_access_token(ref_token, device_id)
     if not new_tokens:
         raise HTTPException(
             status_code = 401,
-            detail = "Invalid refresh token"
+            detail = "Refresh token invalido"
         )
 
     response = JSONResponse(
-        {'message': 'Tokens refreshed successfully'},
+        {'message': 'Token aggiornato con successo'},
         200
     )
 
@@ -96,26 +96,36 @@ async def refresh_token(request: Request):
 @router.post('/register')
 async def register(user: UserForm):
     try:
-        log.info('checking user..')
         if check_user_exists(user.username, str(user.email)):
-            raise HTTPException(status_code = 400, detail = "Username already registered or email already used")
+            raise HTTPException(
+                status_code = 400,
+                detail = "L'username e' gia registrato o l'email e' gia utilizata"
+            )
 
         hashed_password = hash_password(user.password).decode('utf8')
-        create_user(user, hashed_password)
+        if user.istituto.upper() in ["EXT", "ITT", "LAC", "LAV", "0", "1", "2", "3",]:
+            create_user(user, hashed_password)
+        else:
+            raise HTTPException(
+                status_code = 400,
+                detail = f"`{user.istituto}` non e' un istituto riconosciuto. "
+                    f"Inserire uno dei seguenti istituti: EXT, ITT, LAC, LAV"
+            )
 
         return JSONResponse({'message': 'You have registered successfully'}, 201)
-
+    except HTTPException as e:
+        log.error(e)
+        raise
     except Exception as e:
-        log.error(f'Error registering user: {str(e)}')
-        raise HTTPException(status_code = 500, detail = "Internal Server Error")
-
+        log.error(e)
+        raise HTTPException(status_code = 500, detail = "Internal server error")
 
 @router.post('/login')
 async def login(credentials: TokenRequest, request: Request):
     try:
         user = verify_user(credentials.username, credentials.password)
         if not user:
-            raise HTTPException(status_code=401, detail="Incorrect username or password")
+            raise HTTPException(status_code=401, detail="Password o username sbagliati")
 
         device_id = request.cookies.get('device_id') or secrets.token_urlsafe(16)
         tokens = await create_tokens(user, device_id)
@@ -123,7 +133,8 @@ async def login(credentials: TokenRequest, request: Request):
         response = JSONResponse({'message': 'Login successful'}, 200)
         return await _set_auth_cookies(response, tokens, device_id)
 
-    except HTTPException:
+    except HTTPException as e:
+        log.error(e)
         raise
     except Exception as e:
         log.error(f'Error while logging in: {str(e)}')

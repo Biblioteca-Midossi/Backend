@@ -16,7 +16,7 @@ def create_user(user: UserForm, hashed_password):
     id_istituto_map: dict = {'EXT': 0, 'ITT': 1, 'LAC': 2, 'LAV': 3}
 
     if not str(user.istituto).isnumeric():
-        id_istituto = id_istituto_map.get(user.istituto)
+        id_istituto = id_istituto_map.get(user.istituto.upper())
     else:
         id_istituto = user.istituto
 
