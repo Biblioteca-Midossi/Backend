@@ -13,8 +13,8 @@ REFRESH_TOKEN_EXPIRE = 2592000  # 30 days
 
 
 async def get_current_user(request: Request):
-    if bool(get_env('NO_LOGIN_MODE')):
-        return get_foo_user()
+    if get_env('NO_LOGIN_MODE').lower() in ["True", "1"]:
+        return await get_foo_user()
 
     access_token = request.cookies.get('access_token')
     refresh_token = request.cookies.get('refresh_token')

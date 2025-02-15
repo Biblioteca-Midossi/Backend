@@ -177,7 +177,7 @@ async def logout(request: Request):
 
 @router.get('/check')
 async def auth_check(request: Request):
-    if bool(get_env('NO_LOGIN_MODE')):
+    if get_env('NO_LOGIN_MODE').lower in ["true", "1"]:
         foo_user = await get_foo_user()
         return JSONResponse(foo_user)
 
